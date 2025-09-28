@@ -1,0 +1,112 @@
+{
+  "apps": [
+    {
+      "packageName": "com.telenav.scoutivi.news.exeed"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.news.chery"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.zoom.exeed"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.zoom.chery"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.appstore.exeed"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.appstore.chery"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.weather.exeed"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.weather.chery"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.mytuner.exeed"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.mytuner.chery"
+    },
+    {
+      "packageName": "com.telenav.scoutivi.anghami.exeed",
+      "dependencies": [
+        "com.anghami"
+      ]
+    },
+    {
+      "packageName": "com.telenav.scoutivi.anghami.chery",
+      "dependencies": [
+        "com.anghami"
+      ]
+    }
+  ],
+  "fields": {
+    "customfield_10175": [
+      {
+        "value": "Fuxi"
+      }
+    ],
+    "versions": [
+      {
+        "archived": false,
+        "name": "IVI",
+        "released": false
+      }
+    ],
+    "components": [
+      {
+        "name": "IVI"
+      }
+    ],
+    "environment": "test by bugreport",
+    "customfield_10480": {
+      "value": "QA Manual"
+    },
+    "customfield_10381": [
+      {
+        "value": "Fuxi"
+      }
+    ],
+    "customfield_10171": [
+      {
+        "value": "All regions"
+      }
+    ],
+    "customfield_12190": {
+      "value": "Once"
+    },
+    "assignee": {
+      "emailAddress": "hyzhao@telenavsoftware.com",
+      "name": "hyzhao@telenavsoftware.com"
+    },
+    "reporter": {
+      "emailAddress": "hyzhao@telenavsoftware.com",
+      "name": "hyzhao@telenavsoftware.com"
+    },
+    "description": "scout ivi bug report tool",
+    "issuetype": {
+      "avatarId": -1,
+      "name": "Bug",
+      "subtask": false
+    },
+    "customfield_10070": {
+      "value": "P2"
+    },
+    "customfield_11880": {
+      "value": "Bench Test"
+    },
+    "project": {
+      "key": "FX"
+    },
+    "priority": {
+      "name": "Major"
+    },
+    "summary": "[BugReport] From api user",
+    "labels": [
+      "BugReportingTool"
+    ]
+  }
+}

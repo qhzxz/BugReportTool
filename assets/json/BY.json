@@ -1,0 +1,74 @@
+{
+  "apps": [
+    {
+      "packageName": "com.vivid.music.byd",
+      "dependencies": ["com.spotify.music"]
+    }
+  ],
+  "fields": {
+    "customfield_10175": [
+      {
+        "value": "Boya"
+      }
+    ],
+    "versions": [
+      {
+        "archived": false,
+        "name": "Uncertain",
+        "released": false
+      }
+    ],
+    "components": [
+      {
+        "name": "HMI"
+      }
+    ],
+    "environment": "test by bugreport",
+    "customfield_10480": {
+      "value": "QA Manual"
+    },
+    "customfield_10381": [
+      {
+        "value": "Boya"
+      }
+    ],
+    "customfield_10171": [
+      {
+        "value": "All regions"
+      }
+    ],
+    "customfield_12190": {
+      "value": "Once"
+    },
+    "assignee": {
+      "emailAddress": "hqin@telenavsoftware.com",
+      "name": "hqin@telenavsoftware.com"
+    },
+    "description": "scout ivi bug report tool",
+    "issuetype": {
+      "avatarId": -1,
+      "name": "Bug",
+      "subtask": false
+    },
+    "customfield_10070": {
+      "value": "P2"
+    },
+    "customfield_11880": {
+      "value": "Bench Test"
+    },
+    "project": {
+      "key": "BY"
+    },
+    "reporter": {
+      "emailAddress": "hqin@telenavsoftware.com",
+      "name": "hqin@telenavsoftware.com"
+    },
+    "priority": {
+      "name": "Major"
+    },
+    "summary": "[BugReport] From api user",
+    "labels": [
+      "BugReportingTool"
+    ]
+  }
+}

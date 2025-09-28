@@ -1,0 +1,69 @@
+{
+  "apps": [
+    {
+      "packageName": "com.telenav.scoutivi.spotify.dongfeng",
+      "dependencies": ["com.spotify.music"]
+    }
+  ],
+  "fields": {
+    "customfield_10175": [
+      {
+        "value": "Jikang"
+      }
+    ],
+    "versions": [
+      {
+        "archived": false,
+        "name": "Uncertain",
+        "released": false
+      }
+    ],
+    "components": [
+      {
+        "name": "HMI"
+      }
+    ],
+    "environment": "test by bugreport",
+    "customfield_10480": {
+      "value": "QA Manual"
+    },
+    "customfield_10381": [
+      {
+        "value": "Jikang"
+      }
+    ],
+    "customfield_12190": {
+      "value": "Once"
+    },
+    "assignee": {
+      "emailAddress": "wxwen@telenavsoftware.com",
+      "name": "wxwen@telenavsoftware.com"
+    },
+    "description": "scout ivi bug report tool",
+    "issuetype": {
+      "avatarId": -1,
+      "name": "Bug",
+      "subtask": false
+    },
+    "customfield_10070": {
+      "value": "P2"
+    },
+    "customfield_11880": {
+      "value": "Bench Test"
+    },
+    "project": {
+      "key": "ST"
+    },
+    "reporter": {
+      "emailAddress": "byao@telenav.cn",
+      "name": "byao@telenav.cn"
+    },
+    "priority": {
+      "name": "Major"
+    },
+    "summary": "[BugReport] From api user",
+    "labels": [
+      "BugReportingTool"
+    ]
+  }
+}

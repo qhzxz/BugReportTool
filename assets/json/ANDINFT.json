@@ -1,0 +1,73 @@
+{
+  "apps": [
+    {
+      "packageName": "com.telenav.launcher"
+    }
+  ],
+  "fields": {
+    "customfield_10175": [
+      {
+        "value": "Aftermarket-VIVID"
+      }
+    ],
+    "versions": [
+      {
+        "archived": false,
+        "name": "backlog",
+        "released": false
+      }
+    ],
+    "components": [
+      {
+        "name": "Bug Report"
+      }
+    ],
+    "environment": "test by bugreport",
+    "customfield_10480": {
+      "value": "QA Manual"
+    },
+    "customfield_10381": [
+      {
+        "value": "Aftermarket-VIVID"
+      }
+    ],
+    "customfield_10171": [
+      {
+        "value": "All regions"
+      }
+    ],
+    "customfield_12190": {
+      "value": "Once"
+    },
+    "assignee": {
+      "emailAddress": "hyzhao@telenavsoftware.com",
+      "name": "hyzhao@telenavsoftware.com"
+    },
+    "description": "scout ivi bug report tool",
+    "issuetype": {
+      "avatarId": -1,
+      "name": "Bug",
+      "subtask": false
+    },
+    "customfield_10070": {
+      "value": "P2"
+    },
+    "customfield_11880": {
+      "value": "Bench Test"
+    },
+    "project": {
+      "key": "ANDINFT"
+    },
+    "reporter": {
+      "emailAddress": "hyzhao@telenavsoftware.com",
+      "name": "hyzhao@telenavsoftware.com"
+    },
+    "priority": {
+      "name": "Major"
+    },
+    "summary": "[BugReport] From api user",
+    "labels": [
+      "BugReportingTool"
+    ]
+  }
+}

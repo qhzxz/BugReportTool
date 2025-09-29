@@ -22,7 +22,9 @@ class JiraTicketRepository {
           Uri.parse(CREATE_TICKET_URL), headers: headers,
           body: array);
       if (resp.statusCode == HttpStatus.ok) {
-        return Ticket.fromJson(json.decode(utf8.decode(resp.bodyBytes)));
+        var decode = json.decode(utf8.decode(resp.bodyBytes));
+        print("上报BUG成功:${resp.statusCode}");
+        return Ticket.fromJson(decode);
       }else {
         print("上报BUG失败 code:${resp.statusCode}");
       }

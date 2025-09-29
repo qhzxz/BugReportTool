@@ -1,18 +1,30 @@
 import 'dart:io';
+
 import 'package:bug_report_tool/model/app_jira_config.dart';
+import 'package:bug_report_tool/repository/jira_ticket_repository.dart';
+import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
+import 'package:bug_report_tool/usecase/derive_fingerprint_usecase.dart';
+import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
+import 'package:bug_report_tool/usecase/list_device_usecase.dart';
+import 'package:bug_report_tool/usecase/pull_file_usecase.dart';
+import 'package:bug_report_tool/usecase/query_version_usecase.dart';
+import 'package:bug_report_tool/usecase/start_logcat_usecase.dart';
+import 'package:bug_report_tool/usecase/start_screen_record_usecase.dart';
+import 'package:bug_report_tool/usecase/stop_logcat_usecase.dart';
+import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
+import 'package:bug_report_tool/usecase/zip_file_usecase.dart';
+import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/view/app_menu.dart';
 import 'package:bug_report_tool/view/edit_text.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p show basename;
-import 'package:path_provider/path_provider.dart';
-import 'package:archive/archive.dart';
-import 'package:archive/archive_io.dart';
 import 'package:window_size/window_size.dart';
+
 import 'repository/jira_config_repository.dart';
-import 'ui_data.dart';
+import 'view_model.dart';
 
 final JiraConfigRepository REPOSITORY = JiraConfigRepository();
+final JiraTicketRepository TICKET_REPOSITORY = JiraTicketRepository();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,13 +38,6 @@ void main() {
   } catch (e) {
     print("启动异常：$e");
   }
-}
-
-Future<Directory> getLogDirectory() async {
-  final base = await getApplicationSupportDirectory();
-  return Directory(
-    '${base.path}${Platform.pathSeparator}MyApp${Platform.pathSeparator}BugReportTool',
-  );
 }
 
 class MyApp extends StatelessWidget {
@@ -70,215 +75,120 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+
+  ViewModel viewModel = ViewModel();
+  late Function onError;
+
   @override
   void initState() {
     super.initState();
+    onError = (Exception e){
+      setState(() {
+        viewModel.reset();
+      });
+    };
     _listDevices();
-    loadDefaultConfig();
+    _loadDefaultConfig();
   }
 
-  void loadDefaultConfig() async{
+  void _loadDefaultConfig() async{
     final configs = await REPOSITORY.loadJsonFilesFromAssets();
     setState(() {
       print("loadDefaultConfig");
-      data.configs.clear();
-      data.configs.addAll(configs);
+      viewModel.configs.clear();
+      viewModel.configs.addAll(configs);
 
-      data.projects.clear();
-      data.projects.addAll(configs.keys.toList());
+      viewModel.projects.clear();
+      viewModel.projects.addAll(configs.keys.toList());
     });
 
   }
 
-  Future<ProcessResult?> runCmd(String execute, List<String> arguments) async {
-    try {
-      return await Process.run(execute, arguments);
-    } catch (e) {
-      setState(() {
-        data.deviceList.clear();
-        data.currentDevice = "";
-      });
-      print("执行[$execute,$arguments]异常:$e");
-      return null;
-    }
+  Future<bool> _prepareIssue(String serial,String srcVideoFilePath,String srcLogFilePath) async {
+    await StopScreenRecordUsecase(viewModel.currentDevice);
+    await StopLogcatUsecase(viewModel.currentDevice);
+    final dir = await GetFileDirUsecase();
+    await PullFileUsecase(serial, srcVideoFilePath, dir);
+    await PullFileUsecase(serial, srcLogFilePath, dir);
+    return true;
   }
 
-  UIData data = UIData();
-
-
-  Future<void> zipSingleFile({
-    required String filePath,
-    required String zipPath,
-  }) async {
-    // 1. 读取源文件
-    final fileBytes = await File(filePath).readAsBytes();
-
-    // 2. 创建 ZIP 存档对象，并添加文件条目
-    final archive = Archive()
-      ..addFile(
-        ArchiveFile(
-          // 在压缩包内的文件名，可使用 basename(filePath)
-          filePath.split(Platform.pathSeparator).last,
-          fileBytes.length,
-          fileBytes,
-        ),
-      );
-
-    // 3. 将存档编码为 ZIP 格式
-    final zipData = ZipEncoder().encode(archive);
-
-    // 4. 写入到目标 .zip 文件
-    await File(zipPath).writeAsBytes(zipData!);
-    print('已生成压缩文件：$zipPath');
-  }
-
-  String getCurrentTimestamp() {
-    final now = DateTime.now();
-    // 使用 intl 包的 DateFormat
-    final formatter = DateFormat('yyyyMMDDHHmmss');
-    return formatter.format(now);
-  }
-
-  Future<void> reportIssue() async {
-    await _stopRecord();
-    await _stopCapturingLog();
-    await _pullToLocal();
-    final logFileName = p.basename(data.currentLogFilePath);
-    final videoFileName = p.basename(data.currentVideoFilePath);
-    final dir = await getLogDirectory();
-    zipSingleFile(
-      filePath: '${dir.path}${Platform.pathSeparator}$logFileName',
-      zipPath: '${dir.path}${Platform.pathSeparator}log.zip',
+  Future<bool> _zipFile(String srcVideoFilePath, String srcLogFilePath) async {
+    final logFileName = p.basename(srcLogFilePath);
+    final videoFileName = p.basename(srcVideoFilePath);
+    final dir = await GetFileDirUsecase();
+    await ZipFileUsecase(
+        ['$dir${Platform.pathSeparator}$logFileName'],
+        '$dir${Platform.pathSeparator}log.zip'
     );
-    zipSingleFile(
-      filePath: '${dir.path}${Platform.pathSeparator}$videoFileName',
-      zipPath: '${dir.path}${Platform.pathSeparator}video.zip',
+    await ZipFileUsecase(
+        ['$dir${Platform.pathSeparator}$videoFileName'],
+        '$dir${Platform.pathSeparator}video.zip'
     );
+    return true;
   }
 
-  void onClick() {
-    if (data.currentDevice.isEmpty) {
+  void onClick(BuildContext context) {
+    if (viewModel.currentDevice.isEmpty) {
       _listDevices();
       return;
     }
-    if (data.isCapturing) {
-      reportIssue();
+    if (viewModel.isCapturing) {
+      _prepareIssue(viewModel.currentDevice, viewModel.currentVideoFilePath,
+          viewModel.currentLogFilePath).then((r) =>
+      {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('视频录制完成是否上传Bug'),
+              actions: [
+                TextButton(
+                  child: Text('取消'),
+                  onPressed: () => {Navigator.of(context).pop()},
+                ),
+                TextButton(
+                  child: Text('确定'),
+                  onPressed: ()  {
+                    Navigator.of(context).pop();
+                    _zipFile(viewModel.currentVideoFilePath, viewModel.currentLogFilePath)
+                    .then((r)=>{
+                      setState(() {
+                        let(viewModel.getParam(), (p)=>CreateTicketUseCase(TICKET_REPOSITORY, p));
+                      })
+                    });
+                  },
+                ),
+              ],
+            );
+          },
+        )
+      });
     } else {
-      data.currentTimeStamp = getCurrentTimestamp();
-      _screenRecord();
-      _startCapturingLog();
+      viewModel.updateLocalFilePath();
+      _startCapturing().catchError((e)=>{
+        print("_startCapturing :$e")
+      });
     }
     setState(() {
-      data.isCapturing = !data.isCapturing;
+      viewModel.isCapturing = !viewModel.isCapturing;
     });
   }
 
-  Future<void> _pullToLocal() async {
-    final dir = await getLogDirectory();
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
-    }
-    print("PC 目录：${dir.path}");
-    print("adb 开始拉取文件");
-    await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'pull',
-      data.currentVideoFilePath,
-      '${dir.path}',
-    ]);
-    await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'pull',
-      data.currentLogFilePath,
-      '${dir.path}',
-    ]);
-    print("adb 拉取文件结束");
+  void _queryVersion(String serial, String selectedPackage,
+      List<String> dependencies) {
+    List<String> packages = [selectedPackage];
+    packages.addAll(dependencies);
+    QueryVersionUseCase(serial, packages).catchError((e)=>onError(e)).then((m){
+      setState(() {
+        viewModel.updateCurrentVersionMap(selectedPackage, m);
+      });
+    });
   }
 
-  Future<void> _stopRecord() async {
-    final pidResult = await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'shell',
-      '\"pidof screenrecord\"'
-    ]);
-    if (pidResult == null) return;
-    final pid = pidResult.stdout.toString().trim();
-    if (pid.isEmpty) {
-      print('未检测到正在运行的 screenrecord 进程。');
-      return;
-    }
-    print('检测到 screenrecord 进程 ID: $pid');
-    // 2. 发送 SIGINT 信号（-2）优雅停止录制
-    final killResult = await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'shell',
-      '\"kill -2\ $pid"'
-    ]);
-    if (killResult == null) return;
-    if (killResult.exitCode == 0) {
-      print('已发送 SIGINT，录制已停止。');
-    } else {
-      stderr.writeln('发送终止信号失败: ${killResult.stderr.toString().trim()}');
-    }
-  }
-
-  void _screenRecord() async {
-    print('adb 录制视频开始');
-    data.currentVideoFilePath = '/sdcard/video_${data.currentTimeStamp}.mp4';
-    final result = runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'shell',
-      '\"screenrecord ${data.currentVideoFilePath}\"',
-
-    ]);
-    print('adb 录制视频结束');
-  }
-
-  //
-
-  Future<void> _stopCapturingLog() async {
-    final pidResult = await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'shell',
-      '\"pidof logcat\"'
-    ]);
-    if (pidResult == null) return;
-    final pid = pidResult.stdout.toString().trim();
-    if (pid.isEmpty) {
-      print('未检测到正在运行的 logcat 进程。');
-      return;
-    }
-    print('检测到 logcat 进程 ID: $pid');
-    final killResult = await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'shell',
-      '\"kill -2 $pid\"'
-    ]);
-    if (killResult == null) return;
-    if (killResult.exitCode == 0) {
-      print('已发送 SIGINT，logcat已停止。');
-    } else {
-      stderr.writeln('发送终止信号失败: ${killResult.stderr.toString().trim()}');
-    }
-  }
-
-  Future<void> _startCapturingLog() async {
-    print('adb 日志捕捉开始');
-    data.currentLogFilePath = '/sdcard/log_${data.currentTimeStamp}.txt';
-    final result = await runCmd('adb', [
-      '-s',
-      data.currentDevice,
-      'shell',
-      '\"logcat -f ${data.currentLogFilePath}\"',
-    ]);
-    print('adb 日志捕捉结束');
+  Future<void> _startCapturing() async {
+     StartScreenRecordUsecase(viewModel.currentDevice,viewModel.currentVideoFilePath);
+     StartLogcatUsecase(viewModel.currentDevice, viewModel.currentLogFilePath);
   }
 
   @override
@@ -292,61 +202,68 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           AppMenu(
             '请选择当前设备:',
-            data.deviceList.map<DropdownMenuItem<String>>((String value) {
+            viewModel.currentDeviceList.map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(value: value, child: Text(value));
             }).toList(),
-            data.currentDevice.isEmpty?null:data.currentDevice,
+            viewModel.currentDevice.isEmpty?null:viewModel.currentDevice,
             (String? selected) {
               setState(() {
                 if (selected != null) {
-                  data.currentDevice = selected;
-                } else {
-                  data.currentDevice = "";
+                  viewModel.currentDevice = selected;
+                  DeriveFingerprintUsecase(viewModel.currentDevice).catchError((e)=>onError(e)).then((s)=>{
+                    setState(() {
+                      viewModel.updateCurrentSystemInfo(s);
+                    })
+                  });
                 }
               });
             },
           ),
           AppMenu(
             '请选择项目:',
-            data.projects.map<DropdownMenuItem<String>>((String value) {
+            viewModel.projects.map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(value: value, child: Text(value));
             }).toList(),
-            data.currentProject.isEmpty ? null : data.currentProject,
+            viewModel.currentProject.isEmpty ? null : viewModel.currentProject,
             (String? selected) {
               setState(() {
                 if (selected != null) {
-                  data.updateSelectProject(selected);
+                  viewModel.updateSelectProject(selected);
                 }
               });
             },
           ),
           AppMenu(
             '请选择应用:',
-            data.currentAppJiraConfigList.map<DropdownMenuItem<String>>((
-              AppJiraConfig c,
-            ) {
+            viewModel.currentAppJiraConfigList != null ? viewModel
+                .currentAppJiraConfigList!.map<DropdownMenuItem<String>>((
+                AppJiraConfig c,) {
               return DropdownMenuItem<String>(
                 value: c.packageName,
                 child: Text(c.packageName),
               );
-            }).toList(),
-            data.currentApp.isEmpty ? null : data.currentApp,
-            (String? selected) {
-              setState(() {
-                if (selected != null) {
-                  data.updateSelectApp(selected);
-                }
-              });
+            }).toList() : [],
+            viewModel.currentAppPackage.isEmpty ? null : viewModel.currentAppPackage,
+                (String? selectedPackage) {
+                  setState(() {
+                    if (selectedPackage != null) {
+                      viewModel.updateSelectApp(selectedPackage);
+                      List<String> dependencies = viewModel.getDependencies(
+                          selectedPackage);
+                      _queryVersion(viewModel.currentDevice, selectedPackage,
+                          dependencies);
+                    }
+                  });
             },
           ),
           EditText('输入Summary:', 1, 1,(text) {
             setState(() {
-              data.summary = text;
+              viewModel.summary = text;
             });
           }, null),
           EditText('输入Description:', null, 5,(text) {
             setState(() {
-              data.description = text;
+              viewModel.description = text;
             });
           }, TextInputType.multiline),
           Container(
@@ -355,7 +272,7 @@ class _MyHomePageState extends State<MyHomePage> {
               alignment: Alignment.topCenter,
               child: ElevatedButton(
                 onPressed: () {
-                  onClick();
+                  onClick(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue, // 按钮背景色
@@ -366,9 +283,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   ), // 内边距
                   textStyle: const TextStyle(fontSize: 18),
                 ),
-                child: data.currentDevice.isEmpty
+                child: viewModel.currentDevice.isEmpty
                     ? const Text('请先选择设备')
-                    : (data.isCapturing
+                    : (viewModel.isCapturing
                           ? const Text('结束录制')
                           : const Text('开始录制')),
               ),
@@ -379,27 +296,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<void> _listDevices() async {
-    final result = await runCmd('adb', ['devices']);
-    if (result == null) return;
-    if (result.exitCode != 0) return;
-    final output = result.stdout as String;
-    final lines = output.trim().split('\n');
-
-    // 第一行通常是 “List of devices attached”，从第二行开始才是设备信息
-    final List<String> serials = [];
-
-    for (var i = 1; i < lines.length; i++) {
-      final line = lines[i].trim();
-      if (line.isEmpty) continue;
-      final parts = line.split(RegExp(r'\s+'));
-      if (parts.isNotEmpty && parts[0] != 'daemon' && parts[0] != 'offline') {
-        serials.add(parts[0]);
-      }
-    }
-    setState(() {
-      data.deviceList.clear();
-      data.deviceList.addAll(serials);
-    });
+  void _listDevices() async {
+    ListDeviceUseCase().then((value)=>{
+      setState(() {
+        viewModel.updateCurrentDevice(value);
+      })
+    }).catchError((e)=>onError(e));
   }
 }

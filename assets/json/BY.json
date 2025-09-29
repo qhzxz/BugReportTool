@@ -1,7 +1,7 @@
 {
   "apps": [
     {
-      "packageName": "com.vivid.music.byd",
+      "packageName": "com.telenav.scoutivi.spotify.app",
       "dependencies": ["com.spotify.music"]
     }
   ],

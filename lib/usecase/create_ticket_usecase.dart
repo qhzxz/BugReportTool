@@ -1,50 +1,155 @@
 import 'dart:convert';
+import 'dart:core';
+import 'dart:io';
+import 'dart:isolate';
 
-
+import 'package:bug_report_tool/model/status.dart';
 import 'package:bug_report_tool/model/ticket.dart';
-import 'package:bug_report_tool/repository/jira_ticket_repository.dart';
+import 'package:bug_report_tool/repository/jira_repository.dart';
+import 'package:bug_report_tool/repository/jira_rest_repository.dart';
+import 'package:bug_report_tool/repository/resp/create_ticket_resp.dart';
+import 'package:bug_report_tool/usecase/pull_file_usecase.dart';
+import 'package:bug_report_tool/usecase/upload_file_usecase.dart';
+import 'package:bug_report_tool/usecase/usecase.dart';
+import 'package:bug_report_tool/usecase/zip_file_usecase.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../model/app_jira_config.dart';
+import '../model/jira_field_config.dart';
+import '../model/result.dart';
+import '../util/util.dart';
+import 'get_file_dir_usecase.dart';
 
-Future<Ticket?> CreateTicketUseCase(JiraTicketRepository jiraTicketRepository,
-    CreateTicketParam param) async {
-  return compute(_CreateTicketUseCase, _Context(param, jiraTicketRepository));
-}
+class CreateTicketUseCase extends UseCase<Result>{
+  final JiraRestRepository _jiraRestRepository;
+  final JiraRepository _jiraRepository;
+  final CreateTicketParam _param;
 
-Future<Ticket?> _CreateTicketUseCase(_Context c) async {
-  Map<String, dynamic> map = c.param.appJiraConf.jiraFields.fields;
-  map['summary'] = c.param.ticketTitle;
-  map['description'] = c.param.ticketDescription;
-  if (c.param.environment != null) {
-    map['environment'] = jsonEncode(c.param.environment);
+  CreateTicketUseCase(this._jiraRestRepository, this._jiraRepository,
+      this._param);
+
+
+  String _generateJiraFields(CreateTicketParam param) {
+    JiraFieldConfig jiraFields = param.appJiraConf.jiraFields;
+    Map<String, dynamic> map = {};
+    map.addAll(jiraFields.fields);
+    map['summary'] = param.ticketTitle;
+    map['description'] = param.ticketDescription;
+    if (param.environment != null) {
+      map['environment'] = jsonEncode(param.environment);
+    }
+    return jsonEncode(jiraFields.copy(fields: map));
   }
-  String jsonParam = jsonEncode(c.param.appJiraConf.jiraFields);
-  print("创建ticket jsonParam:$jsonParam");
-  // final result = c.repository.createTicket(jsonParam);
-  // try {
-  //   return result;
-  // } catch (e) {
-  //   print("创建ticket失败:$e");
-  // }
-  return null;
-}
+
+  Future <File?> _zipFile(CreateTicketParam param) async {
+    final dir = await GetFileDirUsecase();
+    List<String> localFiles = [];
+    for (var deviceFilePath in param.filePathList) {
+      File? localFile = await PullFileUsecase(param.serial, deviceFilePath, dir);
+      if (localFile != null) {
+        localFiles.add(localFile.path);
+      }
+    }
+    File? zipFile = await ZipFileUsecase(
+      localFiles,
+      '$dir${Platform.pathSeparator}files_${getCurrentTimeFormatString()}.zip',
+    );
+    return zipFile;
+  }
+
+  Ticket _generateTicket(String id, String jiraField, CreateTicketParam param) {
+    Map<String, dynamic> map = param.appJiraConf.jiraFields.fields;
+    String key = map['project']['key'];
+    String reporter = map['reporter']['emailAddress'];
+    String assignee = map['assignee']['emailAddress'];
+    return Ticket(
+        id,
+        null,
+        key,
+        param.ticketTitle,
+        reporter,
+        assignee,
+        jiraField,
+        [],
+        param.appJiraConf.packageName,
+        Status.JIRA_SAVED,
+        DateTime
+            .now()
+            .millisecondsSinceEpoch,
+        null);
+  }
 
 
-class _Context{
-  CreateTicketParam param;
-  JiraTicketRepository repository;
 
-  _Context(this.param, this.repository);
-}
+
+  @override
+  Future<Result> execute() async{
+    String id = Uuid().v4();
+    String jiraField = _generateJiraFields(_param);
+    Ticket ticket = _generateTicket(id, jiraField, _param);
+    File? zipFile = await _zipFile(_param);
+    if (zipFile != null) {
+      ticket = ticket.copyWith(attachments: [zipFile.path]);
+    }
+    await compute(_jiraRepository.saveTicket, ticket);
+    CreateTicketResp? ticketResp;
+    try {
+      ticketResp = await compute(_jiraRestRepository.createTicket, jiraField);
+    } catch (e) {
+      return Error(exception: e);
+    }
+    if (ticketResp != null) {
+      var key = ticketResp.key;
+      if (key != null) {
+        ticket = ticket.copyWith(ticketId: key,status: Status.JIRA_CREATED);
+        print("ticket:$ticket");
+        await compute(_jiraRepository.updateTicket, ticket);
+        try {
+          var uploadResult = await UploadFileUsecase(
+            key,
+            ticket.attachments,
+            _jiraRestRepository,
+          );
+          print("上传文件结果:$uploadResult");
+          if (uploadResult) {
+            ticket = ticket.copyWith(
+                status: Status.JIRA_ATTACHMENTS_UPLOADED, finishedAt: DateTime
+                .now()
+                .millisecondsSinceEpoch);
+            await compute(_jiraRepository.updateTicket, ticket);
+          }
+          if (uploadResult && zipFile != null) {
+            await Isolate.run(() {
+              zipFile.deleteSync(recursive: true);
+            });
+          }
+        } catch (e) {
+          return Error(exception: e);
+        }
+      } else {
+        return Error();
+      }
+    }else{
+      return Error();
+    }
+    return Success(ticket);
+  }}
+
 class CreateTicketParam {
+  final String serial;
   final AppJiraConfig appJiraConf;
   final String ticketTitle;
   final String ticketDescription;
-  final String? mediaFilePath;
-  final Map<String,String>? environment;
-  CreateTicketParam(this.appJiraConf, this.ticketTitle, this.ticketDescription,
-      this.mediaFilePath, this.environment);
+  final List<String> filePathList;
+  final Map<String, String>? environment;
 
-
+  CreateTicketParam(
+    this.serial,
+    this.appJiraConf,
+    this.ticketTitle,
+    this.ticketDescription,
+    this.filePathList,
+    this.environment,
+  );
 }

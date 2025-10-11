@@ -5,6 +5,9 @@ import '../model/jira_field_config.dart';
 
 
 class JiraConfigRepository {
+
+  const JiraConfigRepository();
+
   Future<Map<String,List<AppJiraConfig>>> loadJsonFilesFromAssets() async {
     // 读取 AssetManifest.json
     final manifestContent = await rootBundle.loadString('AssetManifest.json');

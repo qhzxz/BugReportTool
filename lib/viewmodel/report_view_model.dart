@@ -1,9 +1,10 @@
 
 import 'package:bug_report_tool/model/app_jira_config.dart';
 import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
+import 'package:bug_report_tool/util/util.dart';
 import 'package:intl/intl.dart';
 
-class ViewModel {
+class ReportViewModel {
   final List<String> appList = [];
   final List<String> projects = [];
   final Map<String, List<AppJiraConfig>> configs = {};
@@ -77,16 +78,10 @@ class ViewModel {
     return [];
   }
 
-  String getCurrentTimestamp() {
-    final now = DateTime.now();
-    // 使用 intl 包的 DateFormat
-    final formatter = DateFormat('yyyyMMDDHHmmss');
-    return formatter.format(now);
-  }
 
 
   void updateLocalFilePath() {
-    _currentTimeStamp = getCurrentTimestamp();
+    _currentTimeStamp = getCurrentTimeFormatString();
     _currentVideoFilePath = '/sdcard/video_$_currentTimeStamp.mp4';
     _currentLogFilePath = '/sdcard/log_$_currentTimeStamp.txt';
   }
@@ -103,8 +98,9 @@ class ViewModel {
     environment['system_info:'] = _currentSystemInfo;
     print("currentVersionMap:$_currentVersionMap");
 
-    return CreateTicketParam(
-        currentAppJiraConfigList[index], summary, description, "", environment);
+    return CreateTicketParam(currentDevice,
+        currentAppJiraConfigList[index], summary, description,
+        [_currentLogFilePath, _currentVideoFilePath], environment);
   }
 
   void updateCurrentDevice(List<String> list) {

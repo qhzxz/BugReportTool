@@ -15,4 +15,7 @@ class JiraFieldConfig {
 
   /// 由生成的代码实现
   Map<String, dynamic> toJson() => _$JiraFieldConfigToJson(this);
+
+  copy({dynamic fields, List<AppInfo>? apps}) =>
+      JiraFieldConfig(fields: fields ?? this.fields, apps: apps ?? this.apps);
 }

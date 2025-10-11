@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p show basename;
 
 import '../util/util.dart';
 
-Future<bool> PullFileUsecase(
+Future<File?> PullFileUsecase(
   String serial,
   String srcFilePath,
   String dstDirPath,
@@ -10,19 +13,30 @@ Future<bool> PullFileUsecase(
   return compute(_PullFileUsecase, _Param(serial, srcFilePath, dstDirPath));
 }
 
-Future<bool> _PullFileUsecase(
-    _Param p,
-    ) async {
+Future<File?> _PullFileUsecase(_Param param) async {
   try {
-    await runCmd('adb', ['-s', p.serial, 'pull', p.srcFilePath, p.dstDirPath]);
-    await runCmd('adb', ['-s', p.serial, 'shell','rm', p.srcFilePath]);
-    return true;
+    await runCmd('adb', [
+      '-s',
+      param.serial,
+      'pull',
+      param.srcFilePath,
+      param.dstDirPath,
+    ]);
+    await runCmd('adb', ['-s', param.serial, 'shell', 'rm', param.srcFilePath]);
+    ;
+    File file = File(
+      "${param.dstDirPath}${Platform.pathSeparator}${p.basename(param.srcFilePath)}",
+    );
+    if (file.existsSync()) {
+      print("拉取文件成功");
+      return file;
+    }
   } catch (e) {
-    print("拉取文件失败:$e");
+    print("拉取文件异常:$e");
   }
-  return false;
+  print("拉取文件失败");
+  return null;
 }
-
 
 class _Param {
   String serial;

@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:bug_report_tool/database/app_database.dart';
 import 'package:bug_report_tool/database/dao/ticket_dao.dart';
 import 'package:bug_report_tool/model/app_jira_config.dart';
 import 'package:bug_report_tool/page/history_page.dart';
 import 'package:bug_report_tool/page/report_page.dart';
+import 'package:bug_report_tool/page/setting_page.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
@@ -19,8 +21,11 @@ import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
 import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/view/app_menu.dart';
 import 'package:bug_report_tool/view/edit_text.dart';
+import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_size/window_size.dart';
 
 import 'repository/jira_config_repository.dart';
@@ -32,6 +37,12 @@ import 'package:path/path.dart' as p;
 final JiraConfigRepository CONFIG_REPOSITORY = JiraConfigRepository();
 final JiraRestRepository TICKET_REST_REPOSITORY = JiraRestRepository();
 late final JiraRepository JIRA_REPOSITORY;
+
+
+void isolateEntry(RootIsolateToken token) {
+  BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+  // 可以开始使用 platform channel
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,8 +97,9 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  ReportViewModel viewModel = ReportViewModel();
-  final List<String> menus = ['上报BUG', '历史记录'];
+  ReportViewModel reportViewModel = ReportViewModel();
+  SettingsViewModel settingsViewModel = SettingsViewModel();
+  final List<String> menus = ['上报BUG', '历史记录','设置'];
 
   late final List<Widget> pages;
 
@@ -97,11 +109,12 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     pages = [
-      ReportPage(viewModel: viewModel,
+      ReportPage(viewModel: reportViewModel,
           jiraConfigRepository: CONFIG_REPOSITORY,
           jiraRestRepository: TICKET_REST_REPOSITORY,
           jiraRepository: JIRA_REPOSITORY),
-      HistoryPage(jiraRepository: JIRA_REPOSITORY,jiraRestRepository: TICKET_REST_REPOSITORY)
+      HistoryPage(jiraRepository: JIRA_REPOSITORY,jiraRestRepository: TICKET_REST_REPOSITORY),
+      SettingsPage(viewModel: settingsViewModel)
     ];
   }
 

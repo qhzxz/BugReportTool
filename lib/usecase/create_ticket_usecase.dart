@@ -42,21 +42,6 @@ class CreateTicketUseCase extends UseCase<Result>{
     return jsonEncode(jiraFields.copy(fields: map));
   }
 
-  Future <File?> _zipFile(CreateTicketParam param) async {
-    final dir = await GetFileDirUsecase();
-    List<String> localFiles = [];
-    for (var deviceFilePath in param.filePathList) {
-      File? localFile = await PullFileUsecase(param.serial, deviceFilePath, dir);
-      if (localFile != null) {
-        localFiles.add(localFile.path);
-      }
-    }
-    File? zipFile = await ZipFileUsecase(
-      localFiles,
-      '$dir${Platform.pathSeparator}files_${getCurrentTimeFormatString()}.zip',
-    );
-    return zipFile;
-  }
 
   Ticket _generateTicket(String id, String jiraField, CreateTicketParam param) {
     Map<String, dynamic> map = param.appJiraConf.jiraFields.fields;
@@ -71,7 +56,7 @@ class CreateTicketUseCase extends UseCase<Result>{
         reporter,
         assignee,
         jiraField,
-        [],
+        param.filePathList,
         param.appJiraConf.packageName,
         Status.JIRA_SAVED,
         DateTime
@@ -88,10 +73,10 @@ class CreateTicketUseCase extends UseCase<Result>{
     String id = Uuid().v4();
     String jiraField = _generateJiraFields(_param);
     Ticket ticket = _generateTicket(id, jiraField, _param);
-    File? zipFile = await _zipFile(_param);
-    if (zipFile != null) {
-      ticket = ticket.copyWith(attachments: [zipFile.path]);
-    }
+    // File? zipFile = await _zipFile(_param);
+    // if (zipFile != null) {
+    //   ticket = ticket.copyWith(attachments: [zipFile.path]);
+    // }
     await compute(_jiraRepository.saveTicket, ticket);
     CreateTicketResp? ticketResp;
     try {
@@ -119,11 +104,11 @@ class CreateTicketUseCase extends UseCase<Result>{
                 .millisecondsSinceEpoch);
             await compute(_jiraRepository.updateTicket, ticket);
           }
-          if (uploadResult && zipFile != null) {
-            await Isolate.run(() {
-              zipFile.deleteSync(recursive: true);
-            });
-          }
+          // if (uploadResult && zipFile != null) {
+          //   await Isolate.run(() {
+          //     zipFile.deleteSync(recursive: true);
+          //   });
+          // }
         } catch (e) {
           return Error(exception: e);
         }

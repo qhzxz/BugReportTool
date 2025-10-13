@@ -49,21 +49,24 @@ class _HistoryPageState extends State<HistoryPage> {
     List<Ticket> list = historyViewModel.getHistory();
     print("list:$list");
     return Scaffold(
-      body: ListView.builder(
-        itemCount: list.length,
-        itemBuilder: (context, index) {
-          return TicketCard(
-            context: context,
-            createTime: list[index].createdAt,
-            ticketTitle: list[index].title,
-            status: list[index].status,
-            ticketId: list[index].ticketId,
-            callback: () {
-              if (list[index].status!=Status.JIRA_ATTACHMENTS_UPLOADED) {
-                ReuploadTicketUsecase(
-                    list[index], _jiraRestRepository, _jiraRepository)
-                    .execute()
-                    .then((r) {
+      body: Container(
+        margin: EdgeInsets.only(right: 20,top: 10,left: 20,bottom: 10),
+        child: ListView.builder(
+
+          itemCount: list.length,
+          itemBuilder: (context, index) {
+            return TicketCard(
+              context: context,
+              createTime: list[index].createdAt,
+              ticketTitle: list[index].title,
+              status: list[index].status,
+              ticketId: list[index].ticketId,
+              callback: () {
+                if (list[index].status!=Status.JIRA_ATTACHMENTS_UPLOADED) {
+                  ReuploadTicketUsecase(
+                      list[index], _jiraRestRepository, _jiraRepository)
+                      .execute()
+                      .then((r) {
                     if (r is Success) {
                       GetTicketUsecase(_jiraRepository).execute().then((r) {
                         setState(() {
@@ -71,11 +74,12 @@ class _HistoryPageState extends State<HistoryPage> {
                         });
                       });
                     }
-                });
-              }
-            },
-          );
-        },
+                  });
+                }
+              },
+            );
+          },
+        ),
       ),
     );
   }

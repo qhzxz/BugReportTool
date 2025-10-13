@@ -1,4 +1,6 @@
 
+import 'dart:io';
+
 import 'package:bug_report_tool/repository/jira_config_repository.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
@@ -6,11 +8,14 @@ import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
 import 'package:bug_report_tool/usecase/derive_fingerprint_usecase.dart';
 import 'package:bug_report_tool/usecase/list_device_usecase.dart';
 import 'package:bug_report_tool/usecase/load_config_usecase.dart';
+import 'package:bug_report_tool/usecase/mix_voice_usecase.dart';
 import 'package:bug_report_tool/usecase/query_version_usecase.dart';
 import 'package:bug_report_tool/usecase/start_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/start_screen_record_usecase.dart';
+import 'package:bug_report_tool/usecase/start_voice_recording_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
+import 'package:bug_report_tool/usecase/stop_voice_recording_usecase.dart';
 import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/view/app_menu.dart';
 import 'package:bug_report_tool/view/edit_text.dart';
@@ -19,6 +24,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../model/app_jira_config.dart';
+import '../usecase/get_file_dir_usecase.dart';
+import '../usecase/pull_file_usecase.dart';
+import '../usecase/zip_file_usecase.dart';
 
 class ReportPage extends StatefulWidget{
 
@@ -73,15 +81,36 @@ class _ReportPageState extends State<ReportPage>{
     });
   }
 
-  Future<bool> _prepareIssue(
-      String serial,
-      String srcVideoFilePath,
-      String srcLogFilePath,
-      ) async {
+  Future<Map<String,String>> _prepareIssue(
+) async {
     await StopScreenRecordUsecase(viewModel.currentDevice);
     await StopLogcatUsecase(viewModel.currentDevice);
-    return true;
+    String? audioFilePath=await StopVoiceRecordingUsecase().execute();
+    final dir = await GetFileDirUsecase();
+    File? videoFile = await PullFileUsecase(viewModel.currentDevice, viewModel.currentVideoFilePath, dir);
+    File? logFile = await PullFileUsecase(viewModel.currentDevice, viewModel.currentLogFilePath, dir);
+    String? newVideo="";
+    if (videoFile != null && await videoFile.exists() &&
+        audioFilePath != null) {
+       newVideo = await MixVoiceUsecase(videoFile.path, audioFilePath)
+          .execute();
+      print("newVideo:$newVideo");
+    }
+    List<String> zipFilePaths=[];
+    if (logFile != null && await logFile.exists()) {
+      zipFilePaths.add(logFile.path);
+    }
+    if (newVideo != null) {
+      zipFilePaths.add(newVideo);
+    }
+    File? zipFile = await ZipFileUsecase(
+      zipFilePaths,
+      '$dir${Platform.pathSeparator}files_${getCurrentTimeFormatString()}.zip',
+    );
+    print("audioFilePath:$audioFilePath");
+    return {'audio_file': audioFilePath ?? ""};
   }
+
 
   void onClick(BuildContext context) {
     if (viewModel.currentDevice.isEmpty) {
@@ -89,11 +118,7 @@ class _ReportPageState extends State<ReportPage>{
       return;
     }
     if (viewModel.isCapturing) {
-      _prepareIssue(
-        viewModel.currentDevice,
-        viewModel.currentVideoFilePath,
-        viewModel.currentLogFilePath,
-      ).then(
+      _prepareIssue().then(
             (r) => {
           showDialog(
             context: context,
@@ -157,6 +182,9 @@ class _ReportPageState extends State<ReportPage>{
       viewModel.currentVideoFilePath,
     );
     StartLogcatUsecase(viewModel.currentDevice, viewModel.currentLogFilePath);
+    StartVoiceRecordingUsecasse().execute().then((r){
+      print('开始录音');
+    });
   }
 
   @override
@@ -238,16 +266,16 @@ class _ReportPageState extends State<ReportPage>{
               });
             },
           ),
-          EditText('输入Summary:', 1, 1, (text) {
+          EditText(hint: '输入Summary:', maxLine: 1, minLine:1 , onChanged: (text) {
             setState(() {
               viewModel.summary = text;
             });
-          }, null),
-          EditText('输入Description:', null, 5, (text) {
+          }, keyboardType: TextInputType.text),
+          EditText(hint: '输入Description:',minLine:  5, onChanged: (text) {
             setState(() {
               viewModel.description = text;
             });
-          }, TextInputType.multiline),
+          }, keyboardType: TextInputType.multiline),
           Container(
             margin: EdgeInsets.only(top: 50),
             child: Align(

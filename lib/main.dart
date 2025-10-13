@@ -1,36 +1,21 @@
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:bug_report_tool/database/app_database.dart';
 import 'package:bug_report_tool/database/dao/ticket_dao.dart';
-import 'package:bug_report_tool/model/app_jira_config.dart';
 import 'package:bug_report_tool/page/history_page.dart';
 import 'package:bug_report_tool/page/report_page.dart';
 import 'package:bug_report_tool/page/setting_page.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
-import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
-import 'package:bug_report_tool/usecase/derive_fingerprint_usecase.dart';
-import 'package:bug_report_tool/usecase/list_device_usecase.dart';
-import 'package:bug_report_tool/usecase/load_config_usecase.dart';
-import 'package:bug_report_tool/usecase/query_version_usecase.dart';
-import 'package:bug_report_tool/usecase/start_logcat_usecase.dart';
-import 'package:bug_report_tool/usecase/start_screen_record_usecase.dart';
-import 'package:bug_report_tool/usecase/stop_logcat_usecase.dart';
-import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
-import 'package:bug_report_tool/util/util.dart';
-import 'package:bug_report_tool/view/app_menu.dart';
-import 'package:bug_report_tool/view/edit_text.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_size/window_size.dart';
 
 import 'repository/jira_config_repository.dart';
 import 'viewmodel/report_view_model.dart';
-import 'package:path/path.dart' as p;
 
 
 

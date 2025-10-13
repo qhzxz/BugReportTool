@@ -3,18 +3,25 @@ import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 
-Future<File?> ZipFileUsecase(List<String> filePaths, String dstZipPath) async {
-  return compute(_ZipFileUsecase, _Param(filePaths, dstZipPath));
+import '../util/util.dart';
+import 'get_file_dir_usecase.dart';
+
+Future<File?> ZipFileUsecase(List<String> filePaths) async {
+
+  final dir = await GetFileDirUsecase();
+  String dstPath =
+      '$dir${Platform.pathSeparator}files_${getCurrentTimeFormatString()}.zip';
+
+  return compute(_ZipFileUsecase, _Param(filePaths, dstPath));
 }
 
 Future<File?> _ZipFileUsecase(_Param p) async {
-
   final archive = Archive();
 
   for (final path in p.filePaths) {
     // 只读不进内存，而是归档时流式处理
     final file = File(path);
-    if(!file.existsSync()) {
+    if (!file.existsSync()) {
       print("file:${path} 不存在");
       continue;
     }
@@ -34,12 +41,6 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     final outStream = OutputFileStream(p.dstZipPath);
     ZipEncoder().encode(archive, output: outStream);
     await outStream.close();
-    for (final path in p.filePaths) {
-      final file = File(path);
-      if (file.existsSync()) {
-        file.deleteSync(recursive: true);
-      }
-    }
     print("压缩文件成功:${archive.files.length}");
     return File(p.dstZipPath);
   }

@@ -17,15 +17,17 @@ class VoiceRecorder {
 
   final AudioRecorder _recorder = AudioRecorder();
 
-  Future<void> startRecording() async {
+  Future<String?> startRecording() async {
     if (await _recorder.isRecording()) {
       throw Exception('已经开始录音');
     }
     String dirPath = await GetFileDirUsecase();
-    await _recorder.start(RecordConfig(encoder: AudioEncoder.wav),
-        path: '$dirPath${Platform.pathSeparator}temp_${DateTime
+    var path = '$dirPath${Platform.pathSeparator}temp_${DateTime
             .now()
-            .millisecondsSinceEpoch}.wav');
+            .millisecondsSinceEpoch}.wav';
+    await _recorder.start(RecordConfig(encoder: AudioEncoder.wav),
+        path: path);
+    return path;
   }
 
   Future<String?> stopRecording() async {

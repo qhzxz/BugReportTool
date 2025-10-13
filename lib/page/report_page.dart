@@ -9,6 +9,7 @@ import 'package:bug_report_tool/usecase/derive_fingerprint_usecase.dart';
 import 'package:bug_report_tool/usecase/list_device_usecase.dart';
 import 'package:bug_report_tool/usecase/load_config_usecase.dart';
 import 'package:bug_report_tool/usecase/mix_voice_usecase.dart';
+import 'package:bug_report_tool/usecase/prepare_file_usecase.dart';
 import 'package:bug_report_tool/usecase/query_version_usecase.dart';
 import 'package:bug_report_tool/usecase/start_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/start_screen_record_usecase.dart';
@@ -81,34 +82,11 @@ class _ReportPageState extends State<ReportPage>{
     });
   }
 
-  Future<Map<String,String>> _prepareIssue(
+  Future<void> _stopCapturing(
 ) async {
     await StopScreenRecordUsecase(viewModel.currentDevice);
     await StopLogcatUsecase(viewModel.currentDevice);
-    String? audioFilePath=await StopVoiceRecordingUsecase().execute();
-    final dir = await GetFileDirUsecase();
-    File? videoFile = await PullFileUsecase(viewModel.currentDevice, viewModel.currentVideoFilePath, dir);
-    File? logFile = await PullFileUsecase(viewModel.currentDevice, viewModel.currentLogFilePath, dir);
-    String? newVideo="";
-    if (videoFile != null && await videoFile.exists() &&
-        audioFilePath != null) {
-       newVideo = await MixVoiceUsecase(videoFile.path, audioFilePath)
-          .execute();
-      print("newVideo:$newVideo");
-    }
-    List<String> zipFilePaths=[];
-    if (logFile != null && await logFile.exists()) {
-      zipFilePaths.add(logFile.path);
-    }
-    if (newVideo != null) {
-      zipFilePaths.add(newVideo);
-    }
-    File? zipFile = await ZipFileUsecase(
-      zipFilePaths,
-      '$dir${Platform.pathSeparator}files_${getCurrentTimeFormatString()}.zip',
-    );
-    print("audioFilePath:$audioFilePath");
-    return {'audio_file': audioFilePath ?? ""};
+    await StopVoiceRecordingUsecase().execute();
   }
 
 
@@ -118,7 +96,7 @@ class _ReportPageState extends State<ReportPage>{
       return;
     }
     if (viewModel.isCapturing) {
-      _prepareIssue().then(
+      _stopCapturing().then(
             (r) => {
           showDialog(
             context: context,
@@ -134,14 +112,21 @@ class _ReportPageState extends State<ReportPage>{
                     child: Text('确定'),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      setState(() {
-                        let(
-                          viewModel.getParam(),
-                              (p) =>
-                              CreateTicketUseCase(
-                                  _jiraRestRepository, _jiraRepository, p)
-                                  .execute(),
-                        );
+
+                      PrepareFileUsecase(viewModel.currentDevice,
+                          viewModel.currentVideoFilePath,
+                          viewModel.currentLogFilePath,
+                          viewModel.currentAudioFilePath).execute().then((
+                          s) {
+                            setState(() {
+                              let(
+                                viewModel.getParam(s??""),
+                                    (p) =>
+                                    CreateTicketUseCase(
+                                        _jiraRestRepository, _jiraRepository, p)
+                                        .execute(),
+                              );
+                            });
                       });
                     },
                   ),
@@ -152,8 +137,9 @@ class _ReportPageState extends State<ReportPage>{
         },
       );
     } else {
-      viewModel.updateLocalFilePath();
-      _startCapturing().catchError((e) => {print("_startCapturing :$e")});
+      _startCapturing().then((m){
+        viewModel.updateLocalFilePath(videoFilePath: m['videoPath'],audioFilePath: m['audioPath'],logFilePath: m['logPath']);
+      }).catchError((e) => {print("_startCapturing :$e")});
     }
     setState(() {
       viewModel.isCapturing = !viewModel.isCapturing;
@@ -176,15 +162,14 @@ class _ReportPageState extends State<ReportPage>{
     });
   }
 
-  Future<void> _startCapturing() async {
-    StartScreenRecordUsecase(
+  Future<Map<String, String?>> _startCapturing() async {
+    final videoPath = await StartScreenRecordUsecase(
       viewModel.currentDevice,
-      viewModel.currentVideoFilePath,
     );
-    StartLogcatUsecase(viewModel.currentDevice, viewModel.currentLogFilePath);
-    StartVoiceRecordingUsecasse().execute().then((r){
-      print('开始录音');
-    });
+    final logPath = await StartLogcatUsecase(viewModel.currentDevice);
+    final audioPath = await StartVoiceRecordingUsecasse(viewModel.currentDevice)
+        .execute();
+    return {'videoPath': videoPath, 'logPath': logPath,'audioPath':audioPath};
   }
 
   @override

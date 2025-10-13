@@ -2,7 +2,6 @@
 import 'package:bug_report_tool/model/app_jira_config.dart';
 import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
 import 'package:bug_report_tool/util/util.dart';
-import 'package:intl/intl.dart';
 
 class ReportViewModel {
   final List<String> appList = [];
@@ -18,8 +17,8 @@ class ReportViewModel {
   List<String> get currentDeviceList => _currentDeviceList;
   String _currentProject = "";
   String _currentAppPackage = "";
-  String _currentTimeStamp = "";
   String _currentVideoFilePath = "";
+  String _currentAudioFilePath = "";
   String _currentLogFilePath = "";
 
   String summary = "";
@@ -50,8 +49,8 @@ class ReportViewModel {
     _currentDevice = "";
     _currentProject = "";
     _currentAppPackage = "";
-    _currentTimeStamp = "";
     _currentVideoFilePath = "";
+    _currentAudioFilePath ="";
     _currentLogFilePath = "";
   }
 
@@ -79,14 +78,14 @@ class ReportViewModel {
   }
 
 
-
-  void updateLocalFilePath() {
-    _currentTimeStamp = getCurrentTimeFormatString();
-    _currentVideoFilePath = '/sdcard/video_$_currentTimeStamp.mp4';
-    _currentLogFilePath = '/sdcard/log_$_currentTimeStamp.txt';
+  void updateLocalFilePath(
+      {String? videoFilePath, String? audioFilePath, String? logFilePath }) {
+    _currentVideoFilePath = videoFilePath ?? '';
+    _currentAudioFilePath = audioFilePath ?? '';
+    _currentLogFilePath = logFilePath ?? '';
   }
 
-  CreateTicketParam? getParam() {
+  CreateTicketParam? getParam(String file) {
     final currentAppJiraConfigList = _currentAppJiraConfigList;
     if (currentAppJiraConfigList == null) return null;
     if (_currentAppPackage.isEmpty) return null;
@@ -100,7 +99,7 @@ class ReportViewModel {
 
     return CreateTicketParam(currentDevice,
         currentAppJiraConfigList[index], summary, description,
-        [_currentLogFilePath, _currentVideoFilePath], environment);
+        [file], environment);
   }
 
   void updateCurrentDevice(List<String> list) {
@@ -121,9 +120,9 @@ class ReportViewModel {
 
   String get currentAppPackage => _currentAppPackage;
 
-  String get currentTimeStamp => _currentTimeStamp;
-
   String get currentVideoFilePath => _currentVideoFilePath;
+
+  String get currentAudioFilePath => _currentAudioFilePath;
 
   String get currentLogFilePath => _currentLogFilePath;
 

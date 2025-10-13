@@ -8,18 +8,14 @@ import 'package:bug_report_tool/model/ticket.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/repository/resp/create_ticket_resp.dart';
-import 'package:bug_report_tool/usecase/pull_file_usecase.dart';
 import 'package:bug_report_tool/usecase/upload_file_usecase.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
-import 'package:bug_report_tool/usecase/zip_file_usecase.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../model/app_jira_config.dart';
 import '../model/jira_field_config.dart';
 import '../model/result.dart';
-import '../util/util.dart';
-import 'get_file_dir_usecase.dart';
 
 class CreateTicketUseCase extends UseCase<Result>{
   final JiraRestRepository _jiraRestRepository;
@@ -73,10 +69,6 @@ class CreateTicketUseCase extends UseCase<Result>{
     String id = Uuid().v4();
     String jiraField = _generateJiraFields(_param);
     Ticket ticket = _generateTicket(id, jiraField, _param);
-    // File? zipFile = await _zipFile(_param);
-    // if (zipFile != null) {
-    //   ticket = ticket.copyWith(attachments: [zipFile.path]);
-    // }
     await compute(_jiraRepository.saveTicket, ticket);
     CreateTicketResp? ticketResp;
     try {
@@ -104,11 +96,14 @@ class CreateTicketUseCase extends UseCase<Result>{
                 .millisecondsSinceEpoch);
             await compute(_jiraRepository.updateTicket, ticket);
           }
-          // if (uploadResult && zipFile != null) {
-          //   await Isolate.run(() {
-          //     zipFile.deleteSync(recursive: true);
-          //   });
-          // }
+          final List<String> files= ticket.attachments;
+          if (uploadResult && files.isNotEmpty) {
+            await Isolate.run(() {
+              for (var path in files){
+                File(path).deleteSync(recursive: true);
+              }
+            });
+          }
         } catch (e) {
           return Error(exception: e);
         }

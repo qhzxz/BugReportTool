@@ -17,7 +17,8 @@ Container EditText({String? hint, int? maxLine, int ?minLine,ValueChanged<String
         SizedBox(
           width: 500,
             child: TextFormField(
-                controller: TextEditingController(text: defaultValue),
+                key: ValueKey(defaultValue),
+                initialValue: defaultValue??"",
                 decoration: InputDecoration(filled: true,fillColor: Colors.white,border: OutlineInputBorder()),
                 maxLines: maxLine,
                 minLines: minLine,

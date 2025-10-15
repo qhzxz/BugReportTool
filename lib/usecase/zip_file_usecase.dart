@@ -28,12 +28,20 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     final stat = await file.stat();
     if (stat.type != FileSystemEntityType.file) continue;
     final input = InputFileStream(path);
-    final archiveFile = ArchiveFile.stream(
+    try {
+       final archiveFile = ArchiveFile.stream(
       file.uri.pathSegments.last, // zip包内的文件名
       stat.size, // 文件大小
-      input, // 文件输入流
+      input // 文件输入流
     );
     archive.addFile(archiveFile);
+  
+    }catch(e){
+      print('$e');
+    }finally{
+    
+    }
+   
   }
 
   if (archive.isNotEmpty) {
@@ -41,6 +49,7 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     final outStream = OutputFileStream(p.dstZipPath);
     ZipEncoder().encode(archive, output: outStream);
     await outStream.close();
+    archive.files.forEach((element) async {await element.close();});
     print("压缩文件成功:${archive.files.length}");
     return File(p.dstZipPath);
   }

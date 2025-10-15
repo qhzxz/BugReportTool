@@ -7,7 +7,6 @@ import '../util/util.dart';
 import 'get_file_dir_usecase.dart';
 
 Future<File?> ZipFileUsecase(List<String> filePaths) async {
-
   final dir = await GetFileDirUsecase();
   String dstPath =
       '$dir${Platform.pathSeparator}files_${getCurrentTimeFormatString()}.zip';
@@ -29,19 +28,15 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     if (stat.type != FileSystemEntityType.file) continue;
     final input = InputFileStream(path);
     try {
-       final archiveFile = ArchiveFile.stream(
-      file.uri.pathSegments.last, // zip包内的文件名
-      stat.size, // 文件大小
-      input // 文件输入流
-    );
-    archive.addFile(archiveFile);
-  
-    }catch(e){
+      final archiveFile = ArchiveFile.stream(
+        file.uri.pathSegments.last, // zip包内的文件名
+        stat.size, // 文件大小
+        input, // 文件输入流
+      );
+      archive.addFile(archiveFile);
+    } catch (e) {
       print('$e');
-    }finally{
-    
     }
-   
   }
 
   if (archive.isNotEmpty) {
@@ -49,7 +44,9 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     final outStream = OutputFileStream(p.dstZipPath);
     ZipEncoder().encode(archive, output: outStream);
     await outStream.close();
-    archive.files.forEach((element) async {await element.close();});
+    archive.files.forEach((element) async {
+      await element.close();
+    });
     print("压缩文件成功:${archive.files.length}");
     return File(p.dstZipPath);
   }

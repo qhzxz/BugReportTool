@@ -19,15 +19,10 @@ import 'viewmodel/report_view_model.dart';
 
 
 
-final JiraConfigRepository CONFIG_REPOSITORY = JiraConfigRepository();
-final JiraRestRepository TICKET_REST_REPOSITORY = JiraRestRepository();
+final JiraConfigRepository JIRA_CONFIG_REPOSITORY = JiraConfigRepository();
+final JiraRestRepository JIRA_REST_REPOSITORY = JiraRestRepository();
 late final JiraRepository JIRA_REPOSITORY;
 
-
-void isolateEntry(RootIsolateToken token) {
-  BackgroundIsolateBinaryMessenger.ensureInitialized(token);
-  // 可以开始使用 platform channel
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,10 +90,10 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     pages = [
       ReportPage(viewModel: reportViewModel,
-          jiraConfigRepository: CONFIG_REPOSITORY,
-          jiraRestRepository: TICKET_REST_REPOSITORY,
+          jiraConfigRepository: JIRA_CONFIG_REPOSITORY,
+          jiraRestRepository: JIRA_REST_REPOSITORY,
           jiraRepository: JIRA_REPOSITORY),
-      HistoryPage(jiraRepository: JIRA_REPOSITORY,jiraRestRepository: TICKET_REST_REPOSITORY),
+      HistoryPage(jiraRepository: JIRA_REPOSITORY,jiraRestRepository: JIRA_REST_REPOSITORY),
       SettingsPage(viewModel: settingsViewModel)
     ];
   }

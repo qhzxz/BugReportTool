@@ -3,7 +3,7 @@ import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/usecase/get_ticket_usecase.dart';
 import 'package:bug_report_tool/usecase/reupload_ticket_usecase.dart';
-import 'package:bug_report_tool/view/ticket_card.dart';
+import 'package:bug_report_tool/widget//ticket_card.dart';
 import 'package:bug_report_tool/viewmodel/history_view_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';

@@ -1,12 +1,12 @@
 import 'package:bug_report_tool/model/setting.dart';
 import 'package:bug_report_tool/usecase/get_setting_usecase.dart';
 import 'package:bug_report_tool/usecase/save_setting_usecase.dart';
-import 'package:bug_report_tool/view/edit_text.dart';
+import 'package:bug_report_tool/widget/edit_text.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../view/switch.dart';
+import '../widget/switch.dart';
 
 class SettingsPage extends StatefulWidget {
   final SettingsViewModel viewModel;

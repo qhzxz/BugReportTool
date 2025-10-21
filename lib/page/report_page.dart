@@ -119,13 +119,13 @@ class _ReportPageState extends State<ReportPage>{
                           viewModel.currentAudioFilePath).execute().then((
                           s) {
                             setState(() {
-                              let(
-                                viewModel.getParam(s??""),
-                                    (p) =>
-                                    CreateTicketUseCase(
-                                        _jiraRestRepository, _jiraRepository, p)
-                                        .execute(),
-                              );
+                              // let(
+                              //   viewModel.getParam(s??""),
+                              //       (p) =>
+                              //       CreateTicketUseCase(
+                              //           _jiraRestRepository, _jiraRepository, p)
+                              //           .execute(),
+                              // );
                             });
                       });
                     },
@@ -139,7 +139,7 @@ class _ReportPageState extends State<ReportPage>{
     } else {
       _startCapturing().then((m){
         viewModel.updateLocalFilePath(videoFilePath: m['videoPath'],audioFilePath: m['audioPath'],logFilePath: m['logPath']);
-      }).catchError((e) => {print("_startCapturing :$e")});
+      }).catchError((e){print("_startCapturing :$e");});
     }
     setState(() {
       viewModel.isCapturing = !viewModel.isCapturing;

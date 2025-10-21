@@ -1,10 +1,11 @@
 
 
+import 'package:bug_report_tool/model/status.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../model/status.dart';
+
 
 Widget TicketCard(
     {required BuildContext context, String? ticketId, required int createTime, required String ticketTitle, required Status status, GestureTapCallback? callback}) {

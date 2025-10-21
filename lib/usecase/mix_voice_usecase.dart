@@ -24,7 +24,7 @@ class MixVoiceUsecase extends UseCase<String?> {
         .now()
         .millisecondsSinceEpoch}.mp4';
     if (Platform.isMacOS) {
-      String cmd=['-i',
+      String cmd = ['-i',
         '"$_videoFilePath"',
         '-i',
         '"$_audioFilePath"',
@@ -39,9 +39,8 @@ class MixVoiceUsecase extends UseCase<String?> {
         '"$outputPath"'
       ].join(' ');
       FFmpegSession session = await FFmpegKit.execute(cmd);
-      String? output = await session.getOutput();
-      ReturnCode? code=await session.getReturnCode();
-      print("output:$output");
+      ReturnCode? code = await session.getReturnCode();
+      await session.cancel();
       print("code:$code");
     } else if (Platform.isWindows) {
       File file = File('$dirPath${Platform.pathSeparator}ffmpeg.exe');
@@ -50,7 +49,7 @@ class MixVoiceUsecase extends UseCase<String?> {
         await file.writeAsBytes(bytes.buffer.asUint8List());
       }
       await compute(_mergeMp4WithWav, {
-        'executePath':file.path,
+        'executePath': file.path,
         'mp4Path': _videoFilePath,
         'wavPath': _audioFilePath,
         'outputPath': outputPath

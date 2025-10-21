@@ -1,5 +1,11 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
+
+import 'package:archive/archive.dart';
+import 'package:flutter/services.dart';
+
+import '../util/util.dart';
 
 /// ✅ 线程安全的单例，用于在 macOS 上调用 scrcpy 录屏
 class ScrcpyRecorder {
@@ -7,8 +13,87 @@ class ScrcpyRecorder {
   ScrcpyRecorder._internal();
 
   /// 全局唯一实例（懒加载 + 线程安全）
-  static final ScrcpyRecorder _instance = ScrcpyRecorder._internal();
-  static ScrcpyRecorder get instance => _instance;
+  static ScrcpyRecorder? _instance;
+  static Future<ScrcpyRecorder>? _initializingFuture;
+  static late final String _APP_DIR;
+  static late final String _executePath;
+
+  static Future<ScrcpyRecorder> getInstance() async {
+    // 如果实例已存在，直接返回
+    if (_instance != null) return _instance!;
+
+    // 如果有正在初始化的 Future，等待它完成
+    if (_initializingFuture != null) return _initializingFuture!;
+
+    // 否则开始初始化
+    final completer = Completer<ScrcpyRecorder>();
+    _initializingFuture = completer.future;
+
+    final singleton = ScrcpyRecorder._internal();
+
+    _instance = singleton;
+    completer.complete(_instance!);
+
+    // 清理初始化 Future（只初始化一次）
+    _initializingFuture = null;
+
+    return _instance!;
+  }
+
+  static Future<void> init(String appDir) async {
+    _APP_DIR = appDir;
+    String scrcpyDirPath = '$_APP_DIR${Platform.pathSeparator}screenrecord';
+    if (Platform.isMacOS) {
+      final zipPath = 'assets/scrcpy/macos/scrcpy.zip';
+      _executePath = '$scrcpyDirPath${Platform.pathSeparator}scrcpy';
+      await _unzip(scrcpyDirPath, _executePath, zipPath);
+      await runCmd('chmod', ['+x', '$scrcpyDirPath${Platform.pathSeparator}scrcpy']);
+      await runCmd('chmod', ['+x', '$scrcpyDirPath${Platform.pathSeparator}adb']);
+    } else if (Platform.isWindows) {
+      _executePath = '$scrcpyDirPath${Platform.pathSeparator}scrcpy.exe';
+      final zipPath = 'assets/scrcpy/windows/scrcpy.zip';
+      await _unzip(scrcpyDirPath, _executePath, zipPath);
+    }
+    print("ScrcpyRecorder init finished");
+  }
+
+  static Future<void> _unzip(
+    String scrcpyDirPath,
+    String executePath,
+    String zipPath,
+  ) async {
+    File scrcpyFile = File(executePath);
+    if (!await scrcpyFile.exists()) {
+      Directory scrcpyDir = Directory(scrcpyDirPath);
+      if (await scrcpyDir.exists()) {
+        await Isolate.run(() async{
+          await scrcpyDir.delete(recursive: true);
+        });
+      }
+      final bytes = await rootBundle.load(zipPath);
+      final archive = ZipDecoder().decodeBytes(Uint8List.sublistView(bytes));
+      await Isolate.run(() async{
+        await scrcpyDir.create(recursive: true);
+      });
+      for (var file in archive.files) {
+        final filename = file.name;
+        final filePath = '$scrcpyDirPath${Platform.pathSeparator}$filename';
+        if (file.isFile) {
+          final outFile = File(filePath);
+          await Isolate.run(() async{
+            await outFile.create(recursive: true);
+            await outFile.writeAsBytes(file.content as List<int>, flush: true);
+          });
+          print('✅ Extracted file: $filePath');
+        } else {
+          await Isolate.run(() async{
+            await Directory(filePath).create(recursive: true);
+          });
+          print('📁 Created directory: $filePath');
+        }
+      }
+    }
+  }
 
   /// 当前 scrcpy 进程
   Process? _process;
@@ -16,75 +101,63 @@ class ScrcpyRecorder {
   /// 是否正在录制
   bool get isRecording => _process != null;
 
+  String? _currentPath;
+
+
   /// 启动录屏
-  Future<void> startRecording(String outputPath) async {
+  Future<String?> startRecording(String serial) async {
+    print("_APP_DIR 1");
+    String time = getCurrentTimeFormatString();
+    String outputPath = '$_APP_DIR${Platform.pathSeparator}video_$time.mp4';
+    print("_APP_DIR 2");
     // 防止重复启动
     if (_process != null) {
       print('⚠️ scrcpy 正在运行，不能重复启动。');
-      return;
-    }
-
-    // 检查 scrcpy 是否可用
-    final scrcpyExists = await _checkScrcpyAvailable();
-    if (!scrcpyExists) {
-      print('❌ scrcpy 不存在，请确保已通过 brew 安装并在 PATH 中。');
-      return;
+      return null;
     }
 
     try {
       print('🎬 启动 scrcpy 录屏...');
-      _process = await Process.start(
-        'scrcpy',
-        [
-          '--no-display', // 可选: 不显示窗口，仅录制
-          '--record', outputPath,
-        ],
-        runInShell: true,
-      );
-
-      // 输出监听（非阻塞）
-      _process!.stdout
-          .transform(SystemEncoding().decoder)
-          .listen((data) => print('📥 [scrcpy]: $data'));
-      _process!.stderr
-          .transform(SystemEncoding().decoder)
-          .listen((data) => print('⚠️ [scrcpy error]: $data'));
+      _process = await Process.start(_executePath, [
+        '-s',serial,
+        '--record', outputPath,
+      ], runInShell: true);
+      _currentPath = outputPath;
 
       // 监听进程结束
       _process!.exitCode.then((code) {
         print('🛑 scrcpy 退出，代码: $code');
         _process = null;
+        _currentPath = null;
       });
+      return outputPath;
     } catch (e) {
       print('❌ 启动 scrcpy 失败: $e');
       _process = null;
+      _currentPath = null;
     }
+    return null;
   }
 
   /// 停止录屏
-  Future<void> stopRecording() async {
+  Future<String?> stopRecording() async {
     if (_process == null) {
       print('⚠️ 没有正在运行的 scrcpy 进程。');
-      return;
+      return null;
     }
-
+    Process temp = _process!;
     print('🛑 停止 scrcpy 录屏...');
     try {
-      _process?.kill(ProcessSignal.sigterm);
-      _process = null;
+      String? result = _currentPath;
+      await temp.stdin.close();
+      bool k = temp.kill(ProcessSignal.sigterm);
+      await temp.stderr.drain();
+      await temp.stdout.drain();
+      print('🛑 停止 scrcpy 录屏... $k');
+      await temp.exitCode;
+      return result;
     } catch (e) {
       print('❌ 停止 scrcpy 失败: $e');
     }
   }
-
-  /// 检查 scrcpy 是否可用
-  Future<bool> _checkScrcpyAvailable() async {
-    try {
-      final result = await Process.run('which', ['scrcpy']);
-      return result.exitCode == 0 && result.stdout.toString().trim().isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
 }
-

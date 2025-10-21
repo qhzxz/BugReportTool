@@ -47,12 +47,10 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     List<Ticket> list = historyViewModel.getHistory();
-    print("list:$list");
     return Scaffold(
       body: Container(
         margin: EdgeInsets.only(right: 20,top: 10,left: 20,bottom: 10),
         child: ListView.builder(
-
           itemCount: list.length,
           itemBuilder: (context, index) {
             return TicketCard(

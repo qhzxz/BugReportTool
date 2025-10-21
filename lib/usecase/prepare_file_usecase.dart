@@ -22,12 +22,11 @@ class PrepareFileUsecase extends UseCase<String?> {
 
   @override
   Future<String?> execute() async {
-    final dir = await GetFileDirUsecase();
-    File? videoFile = await PullFileUsecase(_serial, _videoFilePath ?? "", dir);
-    File? logFile = await PullFileUsecase(_serial, _logFilePath ?? "", dir);
+    File? videoFile = File(_videoFilePath ?? "");
+    File? logFile = File(_logFilePath ?? "");
     String? newVideo = "";
     String? temp = _audioFilePath;
-    if (videoFile != null && await videoFile.exists() && temp != null) {
+    if (await videoFile.exists() && temp != null) {
       newVideo = await MixVoiceUsecase(videoFile.path, temp).execute();
     }
     List<String> zipFilePaths = [];

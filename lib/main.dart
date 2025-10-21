@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:bug_report_tool/database/app_database.dart';
 import 'package:bug_report_tool/database/dao/ticket_dao.dart';
+import 'package:bug_report_tool/logcat/logcat.dart';
 import 'package:bug_report_tool/page/history_page.dart';
 import 'package:bug_report_tool/page/report_page.dart';
 import 'package:bug_report_tool/page/setting_page.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
+import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
+import 'package:bug_report_tool/video/scrcpy_video_recorder.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +33,12 @@ void main() async {
   final dbFolder = await getApplicationDocumentsDirectory();
   final file = File(p.join(dbFolder.path, 'db.sqlite'));
   JIRA_REPOSITORY = JiraRepository(TicketDao(AppDatabase(file)));
+  await GetFileDirUsecase().then((d) async {
+    await ScrcpyRecorder.init(d);
+
+    await Logcat.init(d);
+  });
+
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
     setWindowTitle('BugReportTool');
     setWindowMinSize(const Size(1280, 720));

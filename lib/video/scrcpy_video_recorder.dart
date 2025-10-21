@@ -150,9 +150,16 @@ class ScrcpyRecorder {
     print('🛑 停止 scrcpy 录屏...');
     try {
       String? result = _currentPath;
-      bool k = Process.killPid(temp.pid, ProcessSignal.sigint);
+      if(Platform.isMacOS){
+        bool k = Process.killPid(temp.pid, ProcessSignal.sigint);
       print('🛑 停止 scrcpy 录屏... $k');
       await temp.exitCode;
+      }else if(Platform.isWindows){
+    
+         final kill_result= await Process.run('taskkill', ['/IM','scrcpy.exe']);
+         print('kill_result:${kill_result.exitCode}}');
+      }
+      
       if (result != null && await File(result).exists()) {
         return result;
       }

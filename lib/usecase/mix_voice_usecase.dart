@@ -66,8 +66,7 @@ class MixVoiceUsecase extends UseCase<String?> {
           '-c:v', 'copy',
           '-c:a', 'aac'
           , map['outputPath']!]);
-    print("混合结果：${result.stdout.toString()}");
-    print("混合结果2：${result.stderr.toString()}");
-    print("混合结果3：${result.exitCode}");
+    print("error message:${result.stderr.toString()}");
+    print("return code：${result.exitCode}");
   }
 }

@@ -120,13 +120,15 @@ class _ReportPageState extends State<ReportPage>{
       throw Exception('无文件');
     }
     File? zipFile = await ZipFileUsecase(zipFilePaths);
-    if (zipFile != null) {
+    await Isolate.run(()async{
       for (final path in zipFilePaths) {
         final file = File(path);
-        if (file.existsSync()) {
-          file.deleteSync(recursive: true);
+        if (await file.exists()) {
+          await file.delete();
         }
       }
+    });
+    if (zipFile != null) {
       return zipFile.path;
     }
     return null;

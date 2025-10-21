@@ -17,13 +17,12 @@ class ReportViewModel {
   List<String> get currentDeviceList => _currentDeviceList;
   String _currentProject = "";
   String _currentAppPackage = "";
-  String _currentVideoFilePath = "";
-  String _currentAudioFilePath = "";
-  String _currentLogFilePath = "";
+  String _currentZipFilePath = "";
 
   String summary = "";
   String description = "";
   bool isCapturing = false;
+
 
   void updateCurrentSystemInfo(String info) {
     _currentSystemInfo = info;
@@ -49,9 +48,7 @@ class ReportViewModel {
     _currentDevice = "";
     _currentProject = "";
     _currentAppPackage = "";
-    _currentVideoFilePath = "";
-    _currentAudioFilePath ="";
-    _currentLogFilePath = "";
+    _currentZipFilePath = "";
   }
 
   void updateCurrentVersionMap(String package, Map<String, String> map) {
@@ -78,14 +75,10 @@ class ReportViewModel {
   }
 
 
-  void updateLocalFilePath(
-      {String? videoFilePath, String? audioFilePath, String? logFilePath }) {
-    _currentVideoFilePath = videoFilePath ?? '';
-    _currentAudioFilePath = audioFilePath ?? '';
-    _currentLogFilePath = logFilePath ?? '';
+  void updateZipFilePath(String path) {
+    _currentZipFilePath = path;
   }
-
-  CreateTicketParam? getParam(String file) {
+  CreateTicketParam? getParam() {
     final currentAppJiraConfigList = _currentAppJiraConfigList;
     if (currentAppJiraConfigList == null) return null;
     if (_currentAppPackage.isEmpty) return null;
@@ -99,12 +92,15 @@ class ReportViewModel {
 
     return CreateTicketParam(currentDevice,
         currentAppJiraConfigList[index], summary, description,
-        [file], environment);
+        [_currentZipFilePath], environment);
   }
 
-  void updateCurrentDevice(List<String> list) {
+  void updateDeviceList(List<String> list) {
     _currentDeviceList.clear();
     _currentDeviceList.addAll(list);
+    if (!_currentDeviceList.contains(_currentDevice)) {
+      _currentDevice = "";
+    }
   }
 
   List<AppJiraConfig>? get currentAppJiraConfigList =>
@@ -116,15 +112,11 @@ class ReportViewModel {
 
   String get currentDevice => _currentDevice;
 
+  String get currentZipFilePath => _currentZipFilePath;
+
   String get currentProject => _currentProject;
 
   String get currentAppPackage => _currentAppPackage;
-
-  String get currentVideoFilePath => _currentVideoFilePath;
-
-  String get currentAudioFilePath => _currentAudioFilePath;
-
-  String get currentLogFilePath => _currentLogFilePath;
 
   set currentDevice(String value) {
     _currentDevice = value;

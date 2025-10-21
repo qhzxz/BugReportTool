@@ -1,10 +1,9 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_session.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+import 'package:bug_report_tool/util/util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -20,33 +19,17 @@ class MixVoiceUsecase extends UseCase<String?> {
     if (!await File(_videoFilePath).exists()) return null;
     if (!await File(_audioFilePath).exists()) return null;
     String dirPath = await GetFileDirUsecase();
-    String outputPath = '$dirPath${Platform.pathSeparator}video_${DateTime
-        .now()
-        .millisecondsSinceEpoch}.mp4';
+    String time=getCurrentTimeFormatString();
+    String outputPath = '$dirPath${Platform.pathSeparator}video_$time.mp4';
     if (Platform.isMacOS) {
-      String cmd = ['-i',
-        '"$_videoFilePath"',
-        '-i',
-        '"$_audioFilePath"',
-        '-map',
-        '0:v:0',
-        '-map',
-        '1:a:0',
-        '-c:v',
-        'copy',
-        '-c:a',
-        'aac',
-        '"$outputPath"'
-      ].join(' ');
-      FFmpegSession session = await FFmpegKit.execute(cmd);
-      ReturnCode? code = await session.getReturnCode();
-      await session.cancel();
-      print("code:$code");
-    } else if (Platform.isWindows) {
-      File file = File('$dirPath${Platform.pathSeparator}ffmpeg.exe');
+      File file = File('$dirPath${Platform.pathSeparator}ffmpeg${Platform.pathSeparator}ffmpeg');
       if (!file.existsSync()) {
-        final bytes = await rootBundle.load('assets/ffmpeg/windows/ffmpeg.exe');
-        await file.writeAsBytes(bytes.buffer.asUint8List());
+        final bytes = await rootBundle.load('assets/ffmpeg/macos/ffmpeg');
+        await Isolate.run(() async {
+          await file.create(recursive: true);
+          await file.writeAsBytes(bytes.buffer.asUint8List());
+          await runCmd('chmod', ['+x', file.path]);
+        });
       }
       await compute(_mergeMp4WithWav, {
         'executePath': file.path,
@@ -54,6 +37,24 @@ class MixVoiceUsecase extends UseCase<String?> {
         'wavPath': _audioFilePath,
         'outputPath': outputPath
       });
+    } else if (Platform.isWindows) {
+      File file = File('$dirPath${Platform.pathSeparator}ffmpeg${Platform.pathSeparator}ffmpeg.exe');
+      if (!file.existsSync()) {
+        final bytes = await rootBundle.load('assets/ffmpeg/windows/ffmpeg.exe');
+        await Isolate.run(() async {
+          await file.create(recursive: true);
+          await file.writeAsBytes(bytes.buffer.asUint8List());
+        });
+      }
+      await compute(_mergeMp4WithWav, {
+        'executePath': file.path,
+        'mp4Path': _videoFilePath,
+        'wavPath': _audioFilePath,
+        'outputPath': outputPath
+      });
+    }
+    if (!await File(outputPath).exists()) {
+      return null;
     }
     return outputPath;
   }

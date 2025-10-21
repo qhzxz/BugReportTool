@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -106,10 +107,8 @@ class ScrcpyRecorder {
 
   /// 启动录屏
   Future<String?> startRecording(String serial) async {
-    print("_APP_DIR 1");
     String time = getCurrentTimeFormatString();
     String outputPath = '$_APP_DIR${Platform.pathSeparator}video_$time.mp4';
-    print("_APP_DIR 2");
     // 防止重复启动
     if (_process != null) {
       print('⚠️ scrcpy 正在运行，不能重复启动。');
@@ -123,6 +122,8 @@ class ScrcpyRecorder {
         '--record', outputPath,
       ], runInShell: true);
       _currentPath = outputPath;
+      _process?.stdout.transform(utf8.decoder).listen((d){});
+      _process?.stderr.transform(utf8.decoder).listen((d){});
 
       // 监听进程结束
       _process!.exitCode.then((code) {
@@ -149,15 +150,16 @@ class ScrcpyRecorder {
     print('🛑 停止 scrcpy 录屏...');
     try {
       String? result = _currentPath;
-      await temp.stdin.close();
-      bool k = temp.kill(ProcessSignal.sigterm);
-      await temp.stderr.drain();
-      await temp.stdout.drain();
+      bool k = Process.killPid(temp.pid, ProcessSignal.sigint);
       print('🛑 停止 scrcpy 录屏... $k');
       await temp.exitCode;
-      return result;
+      if (result != null && await File(result).exists()) {
+        return result;
+      }
+      return null;
     } catch (e) {
       print('❌ 停止 scrcpy 失败: $e');
+      return null;
     }
   }
 }

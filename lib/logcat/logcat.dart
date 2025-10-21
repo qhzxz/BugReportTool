@@ -64,11 +64,16 @@ class Logcat {
     SendPort workerSendPort = await receivePort.first;
     try {
       print('🎬 启动 Logcat...');
-      _process = await Process.start('adb', ['-s',serial,
-        'logcat'
+      _process = await Process.start('adb', [
+        '-s',
+        serial,
+        'logcat',
       ], runInShell: true);
       _currentPath = outputPath;
       _process!.stdout.transform(SystemEncoding().decoder).listen((data) {
+        workerSendPort.send(data);
+      });
+      _process!.stderr.transform(SystemEncoding().decoder).listen((data) {
         workerSendPort.send(data);
       });
 
@@ -93,26 +98,27 @@ class Logcat {
       print('⚠️ 没有正在运行的 Logcat 进程。');
       return null;
     }
-    Process temp= _process!;
+    Process temp = _process!;
     print('🛑 停止 Logcat 捕获...');
     try {
       String? result = _currentPath;
       await temp.stdin.close();
-      temp.kill(ProcessSignal.sigterm);
+      temp.kill(ProcessSignal.sigint);
       await temp.exitCode;
-      return result;
+      if (result != null && await File(result).exists()) {
+        return result;
+      }
+      return null;
     } catch (e) {
       print('❌ 停止 Logcat 失败: $e');
     }
   }
-
-
 }
 
 Future<void> _writeFile(Map<String, dynamic> map) async {
   SendPort mainSendPort = map['port'];
   String filePath = map['path'];
-  ReceivePort workerReceiverPort= ReceivePort();
+  ReceivePort workerReceiverPort = ReceivePort();
   mainSendPort.send(workerReceiverPort.sendPort);
   File file = File(filePath);
   final w = file.openWrite(mode: FileMode.append);
@@ -124,4 +130,5 @@ Future<void> _writeFile(Map<String, dynamic> map) async {
   }
   await w.flush();
   await w.close();
+  print("日志文件正常关闭");
 }

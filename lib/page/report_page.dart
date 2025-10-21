@@ -1,5 +1,6 @@
 
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:bug_report_tool/repository/jira_config_repository.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
@@ -21,6 +22,7 @@ import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/widget//app_menu.dart';
 import 'package:bug_report_tool/widget/edit_text.dart';
 import 'package:bug_report_tool/viewmodel/report_view_model.dart';
+import 'package:bug_report_tool/widget/loading_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -82,11 +84,52 @@ class _ReportPageState extends State<ReportPage>{
     });
   }
 
-  Future<void> _stopCapturing(
+  Future<String?> _stopCapturing(
 ) async {
-    await StopScreenRecordUsecase(viewModel.currentDevice);
-    await StopLogcatUsecase(viewModel.currentDevice);
-    await StopVoiceRecordingUsecase().execute();
+    String? videoPath = await StopScreenRecordUsecase(viewModel.currentDevice);
+    String? logPath = await StopLogcatUsecase(viewModel.currentDevice);
+    String? audioPath = await StopVoiceRecordingUsecase().execute();
+    if (videoPath == null) {
+      throw Exception('缺少音频');
+    }
+    if (logPath == null) {
+      throw Exception('缺少日志');
+    }
+    String? newVideo;
+    if (audioPath != null) {
+      newVideo = await MixVoiceUsecase(videoPath, audioPath).execute();
+      File audio = File(audioPath);
+      File video = File(videoPath);
+      await Isolate.run(() async {
+        if (await audio.exists()) {
+          await audio.delete();
+        }
+        if (await video.exists()) {
+          await video.delete();
+        }
+      });
+    } else {
+      newVideo = videoPath;
+    }
+    List<String> zipFilePaths = [];
+    zipFilePaths.add(logPath);
+    if (newVideo != null) {
+      zipFilePaths.add(newVideo);
+    }
+    if (zipFilePaths.isEmpty) {
+      throw Exception('无文件');
+    }
+    File? zipFile = await ZipFileUsecase(zipFilePaths);
+    if (zipFile != null) {
+      for (final path in zipFilePaths) {
+        final file = File(path);
+        if (file.existsSync()) {
+          file.deleteSync(recursive: true);
+        }
+      }
+      return zipFile.path;
+    }
+    return null;
   }
 
 
@@ -96,54 +139,95 @@ class _ReportPageState extends State<ReportPage>{
       return;
     }
     if (viewModel.isCapturing) {
+      showDialog(context: context,
+          builder: (context) => LoadingDialog(text: '正在压缩文件...'),
+          barrierDismissible: false);
       _stopCapturing().then(
-            (r) => {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('视频录制完成是否上传Bug'),
-                actions: [
-                  TextButton(
-                    child: Text('取消'),
-                    onPressed: () => {Navigator.of(context).pop()},
-                  ),
-                  TextButton(
-                    child: Text('确定'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-
-                      PrepareFileUsecase(viewModel.currentDevice,
-                          viewModel.currentVideoFilePath,
-                          viewModel.currentLogFilePath,
-                          viewModel.currentAudioFilePath).execute().then((
-                          s) {
-                            setState(() {
-                              // let(
-                              //   viewModel.getParam(s??""),
-                              //       (p) =>
-                              //       CreateTicketUseCase(
-                              //           _jiraRestRepository, _jiraRepository, p)
-                              //           .execute(),
-                              // );
-                            });
-                      });
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
+            (r) {
+          setState(() {
+            viewModel.isCapturing = false;
+          });
+          Navigator.of(context).pop();
+          if (r != null) {
+            viewModel.updateZipFilePath(r);
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return _showConfirmDialog(context);
+              },
+            );
+          }
         },
-      );
+      ).onError((e, s) {
+        Navigator.of(context).pop();
+        _listDevices();
+        setState(() {
+          viewModel.isCapturing = false;
+        });
+        print("_stopCapturing :$e");
+      });
     } else {
-      _startCapturing().then((m){
-        viewModel.updateLocalFilePath(videoFilePath: m['videoPath'],audioFilePath: m['audioPath'],logFilePath: m['logPath']);
-      }).catchError((e){print("_startCapturing :$e");});
+      _startCapturing().then((r) {
+        setState(() {
+          viewModel.isCapturing = true;
+        });
+      }).catchError((e) {
+        _listDevices();
+        setState(() {
+          viewModel.isCapturing = false;
+        });
+        print("_startCapturing :$e");
+      });
     }
-    setState(() {
-      viewModel.isCapturing = !viewModel.isCapturing;
+  }
+
+  Widget _showConfirmDialog(BuildContext context){
+
+    return AlertDialog(
+      insetPadding: EdgeInsets.only(left: 50,right: 50,top: 30,bottom: 30),
+      title: Text('视频录制完成是否上传Bug'),
+      actions: [
+        TextButton(
+          child: Text('取消'),
+          onPressed: (){
+            _deleteFile();
+            Navigator.of(context).pop();
+          },
+        ),
+        TextButton(
+          child: Text('确定'),
+          onPressed: () {
+            Navigator.of(context).pop();
+            // _reportIssue(context);
+          },
+        ),
+      ],
+    );
+  }
+
+  void _deleteFile() async {
+    File zip = File(viewModel.currentZipFilePath);
+    await Isolate.run(() async {
+      if (await zip.exists()) {
+        await zip.delete();
+      }
     });
+  }
+
+  void _reportIssue(BuildContext context) async {
+    showDialog(context: context,
+        builder: (context) => LoadingDialog(text: '正在上报BUG...'));
+    let(
+      viewModel.getParam(),
+          (p) =>
+          CreateTicketUseCase(
+              _jiraRestRepository, _jiraRepository, p)
+              .execute().then((r) {
+            Navigator.of(context).pop();
+          }).onError((e, s) {
+            Navigator.of(context).pop();
+          }),
+    );
   }
 
   void _queryVersion(
@@ -162,14 +246,12 @@ class _ReportPageState extends State<ReportPage>{
     });
   }
 
-  Future<Map<String, String?>> _startCapturing() async {
-    final videoPath = await StartScreenRecordUsecase(
-      viewModel.currentDevice,
-    );
-    final logPath = await StartLogcatUsecase(viewModel.currentDevice);
-    final audioPath = await StartVoiceRecordingUsecasse(viewModel.currentDevice)
+  Future<bool> _startCapturing() async {
+    await StartScreenRecordUsecase(viewModel.currentDevice);
+    await StartLogcatUsecase(viewModel.currentDevice);
+    await StartVoiceRecordingUsecasse(viewModel.currentDevice)
         .execute();
-    return {'videoPath': videoPath, 'logPath': logPath,'audioPath':audioPath};
+    return true;
   }
 
   @override
@@ -294,13 +376,18 @@ class _ReportPageState extends State<ReportPage>{
   void _listDevices() async {
     ListDeviceUseCase()
         .then(
-          (value) => {
+          (value) =>
+      {
         setState(() {
-          viewModel.updateCurrentDevice(value);
+          viewModel.updateDeviceList(value);
         }),
       },
     )
-        .catchError((e) => onError(e));
+        .catchError((e) {
+      setState(() {
+        viewModel.updateDeviceList([]);
+      });
+    });
   }
 
 }

@@ -19,6 +19,7 @@ import 'package:bug_report_tool/usecase/stop_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_voice_recording_usecase.dart';
 import 'package:bug_report_tool/util/util.dart';
+import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:bug_report_tool/widget//app_menu.dart';
 import 'package:bug_report_tool/widget/edit_text.dart';
 import 'package:bug_report_tool/viewmodel/report_view_model.dart';
@@ -33,29 +34,38 @@ import '../usecase/zip_file_usecase.dart';
 
 class ReportPage extends StatefulWidget{
 
-  final ReportViewModel viewModel;
+  final ReportViewModel reportViewModel;
+  final SettingsViewModel settingViewModel;
   final JiraConfigRepository _jiraConfigRepository;
   final JiraRestRepository _jiraRestRepository;
   final JiraRepository _jiraRepository;
 
-  const ReportPage({super.key, required this.viewModel, required JiraConfigRepository jiraConfigRepository, required JiraRestRepository jiraRestRepository, required JiraRepository jiraRepository}) : _jiraConfigRepository = jiraConfigRepository, _jiraRestRepository = jiraRestRepository, _jiraRepository = jiraRepository;
+
+  const ReportPage(
+      {super.key, required this.reportViewModel, required this.settingViewModel, required JiraConfigRepository jiraConfigRepository, required JiraRestRepository jiraRestRepository, required JiraRepository jiraRepository})
+      : _jiraConfigRepository = jiraConfigRepository,
+        _jiraRestRepository = jiraRestRepository,
+        _jiraRepository = jiraRepository;
 
   @override
   State<StatefulWidget> createState() {
-    return _ReportPageState(viewModel, _jiraConfigRepository, _jiraRestRepository, _jiraRepository);
+    return _ReportPageState(reportViewModel, settingViewModel,_jiraConfigRepository, _jiraRestRepository, _jiraRepository);
   }
 
 }
 
 class _ReportPageState extends State<ReportPage>{
-  final ReportViewModel viewModel;
+  final ReportViewModel reportViewModel;
+  final SettingsViewModel settingsViewModel;
   final JiraConfigRepository _jiraConfigRepository;
   final JiraRestRepository _jiraRestRepository;
   final JiraRepository _jiraRepository;
 
   late Function onError;
 
-  _ReportPageState(this.viewModel, this._jiraConfigRepository, this._jiraRestRepository, this._jiraRepository);
+  _ReportPageState(this.reportViewModel, this.settingsViewModel,
+      this._jiraConfigRepository, this._jiraRestRepository,
+      this._jiraRepository);
 
 
 
@@ -64,7 +74,7 @@ class _ReportPageState extends State<ReportPage>{
     super.initState();
     onError = (Exception e) {
       setState(() {
-        viewModel.reset();
+        reportViewModel.reset();
       });
     };
     _listDevices();
@@ -76,18 +86,18 @@ class _ReportPageState extends State<ReportPage>{
     {
       setState(() {
         print("loadDefaultConfig");
-        viewModel.configs.clear();
-        viewModel.configs.addAll(r);
-        viewModel.projects.clear();
-        viewModel.projects.addAll(r.keys.toList());
+        reportViewModel.configs.clear();
+        reportViewModel.configs.addAll(r);
+        reportViewModel.projects.clear();
+        reportViewModel.projects.addAll(r.keys.toList());
       })
     });
   }
 
   Future<String?> _stopCapturing(
 ) async {
-    String? videoPath = await StopScreenRecordUsecase(viewModel.currentDevice);
-    String? logPath = await StopLogcatUsecase(viewModel.currentDevice);
+    String? videoPath = await StopScreenRecordUsecase(reportViewModel.currentDevice);
+    String? logPath = await StopLogcatUsecase(reportViewModel.currentDevice);
     String? audioPath = await StopVoiceRecordingUsecase().execute();
     if (videoPath == null) {
       throw Exception('缺少音频');
@@ -136,24 +146,25 @@ class _ReportPageState extends State<ReportPage>{
 
 
   void onClick(BuildContext context) {
-    if (viewModel.currentDevice.isEmpty) {
+    if (reportViewModel.currentDevice.isEmpty) {
       _listDevices();
       return;
     }
-    if (viewModel.isCapturing) {
+    if (reportViewModel.isCapturing) {
       showDialog(context: context,
           builder: (context) => LoadingDialog(text: '正在压缩文件...'),
           barrierDismissible: false);
       _stopCapturing().then(
             (r) {
           setState(() {
-            viewModel.isCapturing = false;
+            reportViewModel.isCapturing = false;
           });
           Navigator.of(context).pop();
           if (r != null) {
-            viewModel.updateZipFilePath(r);
+            reportViewModel.updateZipFilePath(r);
             showDialog(
               context: context,
+              barrierDismissible: false,
               builder: (BuildContext context) {
                 return _showConfirmDialog(context);
               },
@@ -164,19 +175,24 @@ class _ReportPageState extends State<ReportPage>{
         Navigator.of(context).pop();
         _listDevices();
         setState(() {
-          viewModel.isCapturing = false;
+          reportViewModel.isCapturing = false;
         });
         print("_stopCapturing :$e");
       });
     } else {
+      showDialog(context: context,
+          builder: (context) => LoadingDialog(text: '启动录制...'),
+          barrierDismissible: false);
       _startCapturing().then((r) {
+        Navigator.of(context).pop();
         setState(() {
-          viewModel.isCapturing = true;
+          reportViewModel.isCapturing = true;
         });
       }).catchError((e) {
+        Navigator.of(context).pop();
         _listDevices();
         setState(() {
-          viewModel.isCapturing = false;
+          reportViewModel.isCapturing = false;
         });
         print("_startCapturing :$e");
       });
@@ -184,7 +200,6 @@ class _ReportPageState extends State<ReportPage>{
   }
 
   Widget _showConfirmDialog(BuildContext context){
-
     return AlertDialog(
       insetPadding: EdgeInsets.only(left: 50,right: 50,top: 30,bottom: 30),
       title: Text('视频录制完成是否上传Bug'),
@@ -208,7 +223,7 @@ class _ReportPageState extends State<ReportPage>{
   }
 
   void _deleteFile() async {
-    File zip = File(viewModel.currentZipFilePath);
+    File zip = File(reportViewModel.currentZipFilePath);
     await Isolate.run(() async {
       if (await zip.exists()) {
         await zip.delete();
@@ -220,7 +235,7 @@ class _ReportPageState extends State<ReportPage>{
     showDialog(context: context,
         builder: (context) => LoadingDialog(text: '正在上报BUG...'));
     let(
-      viewModel.getParam(),
+      reportViewModel.getParam(),
           (p) =>
           CreateTicketUseCase(
               _jiraRestRepository, _jiraRepository, p)
@@ -243,15 +258,15 @@ class _ReportPageState extends State<ReportPage>{
         m,
         ) {
       setState(() {
-        viewModel.updateCurrentVersionMap(selectedPackage, m);
+        reportViewModel.updateCurrentVersionMap(selectedPackage, m);
       });
     });
   }
 
   Future<bool> _startCapturing() async {
-    await StartScreenRecordUsecase(viewModel.currentDevice);
-    await StartLogcatUsecase(viewModel.currentDevice);
-    await StartVoiceRecordingUsecasse(viewModel.currentDevice)
+    await StartScreenRecordUsecase(reportViewModel.currentDevice);
+    await StartLogcatUsecase(reportViewModel.currentDevice);
+    await StartVoiceRecordingUsecasse(reportViewModel.currentDevice)
         .execute();
     return true;
   }
@@ -267,22 +282,22 @@ class _ReportPageState extends State<ReportPage>{
           ),
           AppMenu(
             '请选择当前设备:',
-            viewModel.currentDeviceList.map<DropdownMenuItem<String>>((
+            reportViewModel.currentDeviceList.map<DropdownMenuItem<String>>((
                 String value,
                 ) {
               return DropdownMenuItem<String>(value: value, child: Text(value));
             }).toList(),
-            viewModel.currentDevice.isEmpty ? null : viewModel.currentDevice,
+            reportViewModel.currentDevice.isEmpty ? null : reportViewModel.currentDevice,
                 (String? selected) {
               setState(() {
                 if (selected != null) {
-                  viewModel.currentDevice = selected;
-                  DeriveFingerprintUsecase(viewModel.currentDevice)
+                  reportViewModel.currentDevice = selected;
+                  DeriveFingerprintUsecase(reportViewModel.currentDevice)
                       .catchError((e) => onError(e))
                       .then(
                         (s) => {
                       setState(() {
-                        viewModel.updateCurrentSystemInfo(s);
+                        reportViewModel.updateCurrentSystemInfo(s);
                       }),
                     },
                   );
@@ -292,22 +307,22 @@ class _ReportPageState extends State<ReportPage>{
           ),
           AppMenu(
             '请选择项目:',
-            viewModel.projects.map<DropdownMenuItem<String>>((String value) {
+            reportViewModel.projects.map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(value: value, child: Text(value));
             }).toList(),
-            viewModel.currentProject.isEmpty ? null : viewModel.currentProject,
+            reportViewModel.currentProject.isEmpty ? null : reportViewModel.currentProject,
                 (String? selected) {
               setState(() {
                 if (selected != null) {
-                  viewModel.updateSelectProject(selected);
+                  reportViewModel.updateSelectProject(selected);
                 }
               });
             },
           ),
           AppMenu(
             '请选择应用:',
-            viewModel.currentAppJiraConfigList != null
-                ? viewModel.currentAppJiraConfigList!
+            reportViewModel.currentAppJiraConfigList != null
+                ? reportViewModel.currentAppJiraConfigList!
                 .map<DropdownMenuItem<String>>((AppJiraConfig c) {
               return DropdownMenuItem<String>(
                 value: c.packageName,
@@ -316,18 +331,18 @@ class _ReportPageState extends State<ReportPage>{
             })
                 .toList()
                 : [],
-            viewModel.currentAppPackage.isEmpty
+            reportViewModel.currentAppPackage.isEmpty
                 ? null
-                : viewModel.currentAppPackage,
+                : reportViewModel.currentAppPackage,
                 (String? selectedPackage) {
               setState(() {
                 if (selectedPackage != null) {
-                  viewModel.updateSelectApp(selectedPackage);
-                  List<String> dependencies = viewModel.getDependencies(
+                  reportViewModel.updateSelectApp(selectedPackage);
+                  List<String> dependencies = reportViewModel.getDependencies(
                     selectedPackage,
                   );
                   _queryVersion(
-                    viewModel.currentDevice,
+                    reportViewModel.currentDevice,
                     selectedPackage,
                     dependencies,
                   );
@@ -337,12 +352,12 @@ class _ReportPageState extends State<ReportPage>{
           ),
           EditText(hint: '输入Summary:', maxLine: 1, minLine:1 , onChanged: (text) {
             setState(() {
-              viewModel.summary = text;
+              reportViewModel.summary = text;
             });
           }, keyboardType: TextInputType.text),
           EditText(hint: '输入Description:',minLine:  5, onChanged: (text) {
             setState(() {
-              viewModel.description = text;
+              reportViewModel.description = text;
             });
           }, keyboardType: TextInputType.multiline),
           Container(
@@ -362,9 +377,9 @@ class _ReportPageState extends State<ReportPage>{
                   ), // 内边距
                   textStyle: const TextStyle(fontSize: 18),
                 ),
-                child: viewModel.currentDevice.isEmpty
+                child: reportViewModel.currentDevice.isEmpty
                     ? const Text('请先选择设备')
-                    : (viewModel.isCapturing
+                    : (reportViewModel.isCapturing
                     ? const Text('结束录制')
                     : const Text('开始录制')),
               ),
@@ -381,13 +396,13 @@ class _ReportPageState extends State<ReportPage>{
           (value) =>
       {
         setState(() {
-          viewModel.updateDeviceList(value);
+          reportViewModel.updateDeviceList(value);
         }),
       },
     )
         .catchError((e) {
       setState(() {
-        viewModel.updateDeviceList([]);
+        reportViewModel.updateDeviceList([]);
       });
     });
   }

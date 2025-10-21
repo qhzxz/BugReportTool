@@ -98,7 +98,8 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     pages = [
-      ReportPage(viewModel: reportViewModel,
+      ReportPage(reportViewModel: reportViewModel,
+          settingViewModel: settingsViewModel,
           jiraConfigRepository: JIRA_CONFIG_REPOSITORY,
           jiraRestRepository: JIRA_REST_REPOSITORY,
           jiraRepository: JIRA_REPOSITORY),

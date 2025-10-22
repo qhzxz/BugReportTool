@@ -33,14 +33,15 @@ class _HistoryPageState extends State<HistoryPage> {
   _HistoryPageState(this._jiraRepository, this._jiraRestRepository);
 
 
-
   @override
   void initState() {
     super.initState();
     GetTicketUsecase(_jiraRepository).execute().then((r) {
-      setState(() {
-        historyViewModel.updateHistory(r);
-      });
+      if (r is Success) {
+        setState(() {
+          historyViewModel.updateHistory((r as Success<List<Ticket>>).result);
+        });
+      }
     });
   }
 
@@ -67,9 +68,11 @@ class _HistoryPageState extends State<HistoryPage> {
                       .then((r) {
                     if (r is Success) {
                       GetTicketUsecase(_jiraRepository).execute().then((r) {
-                        setState(() {
-                          historyViewModel.updateHistory(r);
-                        });
+                        if (r is Success) {
+                          setState(() {
+                            historyViewModel.updateHistory((r as Success<List<Ticket>>).result);
+                          });
+                        }
                       });
                     }
                   });

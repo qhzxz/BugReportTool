@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/repository/jira_config_repository.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
@@ -10,7 +11,6 @@ import 'package:bug_report_tool/usecase/derive_fingerprint_usecase.dart';
 import 'package:bug_report_tool/usecase/list_device_usecase.dart';
 import 'package:bug_report_tool/usecase/load_config_usecase.dart';
 import 'package:bug_report_tool/usecase/mix_voice_usecase.dart';
-import 'package:bug_report_tool/usecase/prepare_file_usecase.dart';
 import 'package:bug_report_tool/usecase/query_version_usecase.dart';
 import 'package:bug_report_tool/usecase/start_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/start_screen_record_usecase.dart';
@@ -19,17 +19,14 @@ import 'package:bug_report_tool/usecase/stop_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_voice_recording_usecase.dart';
 import 'package:bug_report_tool/util/util.dart';
+import 'package:bug_report_tool/viewmodel/report_view_model.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:bug_report_tool/widget//app_menu.dart';
 import 'package:bug_report_tool/widget/edit_text.dart';
-import 'package:bug_report_tool/viewmodel/report_view_model.dart';
 import 'package:bug_report_tool/widget/loading_dialog.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../model/app_jira_config.dart';
-import '../usecase/get_file_dir_usecase.dart';
-import '../usecase/pull_file_usecase.dart';
 import '../usecase/zip_file_usecase.dart';
 
 class ReportPage extends StatefulWidget{
@@ -82,31 +79,37 @@ class _ReportPageState extends State<ReportPage>{
   }
 
   void _loadDefaultConfig() {
-    LoadConfigUsecase(_jiraConfigRepository).execute().then((r) =>
+    LoadConfigUsecase(_jiraConfigRepository).execute().then((r)
     {
-      setState(() {
-        print("loadDefaultConfig");
-        reportViewModel.configs.clear();
-        reportViewModel.configs.addAll(r);
-        reportViewModel.projects.clear();
-        reportViewModel.projects.addAll(r.keys.toList());
-      })
+      if(r is Success){
+        Map<String, List<AppJiraConfig>> map = (r as Success).result;
+        setState(() {
+          print("loadDefaultConfig");
+          reportViewModel.configs.clear();
+          reportViewModel.configs.addAll(map);
+          reportViewModel.projects.clear();
+          reportViewModel.projects.addAll(map.keys.toList());
+        });
+      }
+
     });
   }
 
   Future<String?> _stopCapturing(
 ) async {
-    String? videoPath = await StopScreenRecordUsecase(reportViewModel.currentDevice);
-    String? logPath = await StopLogcatUsecase(reportViewModel.currentDevice);
-    String? audioPath = await StopVoiceRecordingUsecase().execute();
-    if (videoPath == null) {
+    Result<String> videoResult = await StopScreenRecordUsecase().execute();
+    Result<String> logResult = await StopLogcatUsecase().execute();
+    Result<String> audioResult = await StopVoiceRecordingUsecase().execute();
+    if (videoResult is Error) {
       throw Exception('缺少音频');
     }
-    if (logPath == null) {
+    if (logResult is Error) {
       throw Exception('缺少日志');
     }
-    String? newVideo;
-    if (audioPath != null) {
+    Result<String> newVideo;
+    if (audioResult is Success) {
+      var audioPath = (audioResult as Success<String>).result;
+      var videoPath = (videoResult as Success<String>).result;
       newVideo = await MixVoiceUsecase(videoPath, audioPath).execute();
       File audio = File(audioPath);
       File video = File(videoPath);
@@ -119,12 +122,12 @@ class _ReportPageState extends State<ReportPage>{
         }
       });
     } else {
-      newVideo = videoPath;
+      newVideo = videoResult;
     }
     List<String> zipFilePaths = [];
-    zipFilePaths.add(logPath);
-    if (newVideo != null) {
-      zipFilePaths.add(newVideo);
+    zipFilePaths.add((logResult as Success<String>).result);
+    if (newVideo is Success) {
+      zipFilePaths.add((newVideo as Success<String>).result);
     }
     if (zipFilePaths.isEmpty) {
       throw Exception('无文件');
@@ -185,9 +188,13 @@ class _ReportPageState extends State<ReportPage>{
           barrierDismissible: false);
       _startCapturing().then((r) {
         Navigator.of(context).pop();
-        setState(() {
-          reportViewModel.isCapturing = true;
-        });
+        if (r) {
+          setState(() {
+            reportViewModel.isCapturing = true;
+          });
+        }else{
+          _listDevices();
+        }
       }).catchError((e) {
         Navigator.of(context).pop();
         _listDevices();
@@ -264,10 +271,24 @@ class _ReportPageState extends State<ReportPage>{
   }
 
   Future<bool> _startCapturing() async {
-    await StartScreenRecordUsecase(reportViewModel.currentDevice);
-    await StartLogcatUsecase(reportViewModel.currentDevice);
-    await StartVoiceRecordingUsecasse(reportViewModel.currentDevice)
-        .execute();
+    Result videoResult = await StartScreenRecordUsecase(
+        reportViewModel.currentDevice).execute();
+    Result logResult = await StartLogcatUsecase(
+        reportViewModel.currentDevice).execute();
+    Result audioResult = await StartVoiceRecordingUsecasse(
+        reportViewModel.currentDevice).execute();
+    if ((videoResult is Success<bool> && !videoResult.result) ||
+        videoResult is Error) {
+      return false;
+    }
+    if ((logResult is Success<bool> && !logResult.result) ||
+        logResult is Error) {
+      return false;
+    }
+    if ((audioResult is Success<bool> && !audioResult.result) ||
+        audioResult is Error) {
+      return false;
+    }
     return true;
   }
 

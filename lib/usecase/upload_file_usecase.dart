@@ -1,24 +1,35 @@
+import 'package:bug_report_tool/model/result.dart';
+import 'package:bug_report_tool/usecase/usecase.dart';
 import 'package:flutter/foundation.dart';
 
 import '../repository/jira_rest_repository.dart';
 
-Future<bool> UploadFileUsecase(
-  String id,
-  List<String> uploadFiles,
-  JiraRestRepository jiraTicketRepository,
-) async {
-  return compute(
-    _UploadFileUsecase,
-    _Param(id, uploadFiles, jiraTicketRepository),
-  );
+
+class UploadFileUsecase extends UseCase<bool> {
+  String _id;
+  List<String> _uploadFiles;
+  JiraRestRepository _jiraTicketRepository;
+
+
+  UploadFileUsecase(this._id, this._uploadFiles, this._jiraTicketRepository);
+
+  @override
+  Future<Result<bool>> run() async {
+    return Success(await compute(
+      _UploadFileUsecase,
+      _Param(_id, _uploadFiles, _jiraTicketRepository),
+    ));
+  }
+
+  Future<bool> _UploadFileUsecase(_Param param) async {
+    return param.jiraTicketRepository.addAttachments(
+      param.ticketId,
+      param.filePathList,
+    );
+  }
+
 }
 
-Future<bool> _UploadFileUsecase(_Param param) async {
-  return param.jiraTicketRepository.addAttachments(
-    param.ticketId,
-    param.filePathList,
-  );
-}
 
 class _Param {
   String ticketId;

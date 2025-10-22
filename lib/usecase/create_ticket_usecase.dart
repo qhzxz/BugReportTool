@@ -17,7 +17,7 @@ import '../model/app_jira_config.dart';
 import '../model/jira_field_config.dart';
 import '../model/result.dart';
 
-class CreateTicketUseCase extends UseCase<Result>{
+class CreateTicketUseCase extends UseCase<Ticket>{
   final JiraRestRepository _jiraRestRepository;
   final JiraRepository _jiraRepository;
   final CreateTicketParam _param;
@@ -61,11 +61,8 @@ class CreateTicketUseCase extends UseCase<Result>{
         null);
   }
 
-
-
-
   @override
-  Future<Result> execute() async{
+  Future<Result<Ticket>> run() async{
     String id = Uuid().v4();
     String jiraField = _generateJiraFields(_param);
     Ticket ticket = _generateTicket(id, jiraField, _param);
@@ -87,22 +84,24 @@ class CreateTicketUseCase extends UseCase<Result>{
             key,
             ticket.attachments,
             _jiraRestRepository,
-          );
+          ).execute();
           print("上传文件结果:$uploadResult");
-          if (uploadResult) {
+          if (uploadResult is Success<bool> && uploadResult.result) {
             ticket = ticket.copyWith(
                 status: Status.JIRA_ATTACHMENTS_UPLOADED, finishedAt: DateTime
                 .now()
                 .millisecondsSinceEpoch);
             await compute(_jiraRepository.updateTicket, ticket);
-          }
-          final List<String> files= ticket.attachments;
-          if (uploadResult && files.isNotEmpty) {
-            await Isolate.run(() {
-              for (var path in files){
-                File(path).deleteSync(recursive: true);
-              }
-            });
+            final List<String> files = ticket.attachments;
+            if (files.isNotEmpty) {
+              await Isolate.run(() async {
+                for (var path in files) {
+                  await File(path).delete();
+                }
+              });
+            }
+          }else {
+            return Error(exception: (uploadResult as Error).exception);
           }
         } catch (e) {
           return Error(exception: e);
@@ -114,6 +113,7 @@ class CreateTicketUseCase extends UseCase<Result>{
       return Error();
     }
     return Success(ticket);
+
   }}
 
 class CreateTicketParam {

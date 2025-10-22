@@ -12,15 +12,16 @@ import 'package:bug_report_tool/usecase/upload_file_usecase.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
 import 'package:flutter/foundation.dart';
 
-class ReuploadTicketUsecase extends UseCase<Result>{
+class ReuploadTicketUsecase extends UseCase<Ticket>{
   final Ticket _ticket;
   final JiraRestRepository _jiraRestRepository;
   final JiraRepository _repository;
 
   ReuploadTicketUsecase(this._ticket, this._jiraRestRepository, this._repository);
 
+
   @override
-  Future<Result> execute() async {
+  Future<Result<Ticket>> run() async{
     Ticket temp = _ticket;
     if (temp.status == Status.JIRA_SAVED) {
       try {
@@ -40,9 +41,9 @@ class ReuploadTicketUsecase extends UseCase<Result>{
     }
     if (temp.status == Status.JIRA_CREATED) {
       try {
-        bool success = await UploadFileUsecase(
-            temp.ticketId!, temp.attachments, _jiraRestRepository);
-        if (success) {
+        Result result = await UploadFileUsecase(
+            temp.ticketId!, temp.attachments, _jiraRestRepository).execute();
+        if (result is Success<bool> && result.result) {
           temp = temp.copyWith(
               status: Status.JIRA_ATTACHMENTS_UPLOADED, finishedAt: DateTime
               .now()
@@ -56,12 +57,15 @@ class ReuploadTicketUsecase extends UseCase<Result>{
               }
             }
           });
+        }else {
+          return Error(exception: (result as Error).exception);
         }
       } catch (e) {
         return Error(exception: e);
       }
     }
     return Success(temp);
+
   }
 
 }

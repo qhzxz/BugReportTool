@@ -48,8 +48,14 @@ class ScrcpyRecorder {
       final zipPath = 'assets/scrcpy/macos/scrcpy.zip';
       _executePath = '$scrcpyDirPath${Platform.pathSeparator}scrcpy';
       await _unzip(scrcpyDirPath, _executePath, zipPath);
-      await runCmd('chmod', ['+x', '$scrcpyDirPath${Platform.pathSeparator}scrcpy']);
-      await runCmd('chmod', ['+x', '$scrcpyDirPath${Platform.pathSeparator}adb']);
+      await runCmd('chmod', [
+        '+x',
+        '$scrcpyDirPath${Platform.pathSeparator}scrcpy',
+      ]);
+      await runCmd('chmod', [
+        '+x',
+        '$scrcpyDirPath${Platform.pathSeparator}adb',
+      ]);
     } else if (Platform.isWindows) {
       _executePath = '$scrcpyDirPath${Platform.pathSeparator}scrcpy.exe';
       final zipPath = 'assets/scrcpy/windows/scrcpy.zip';
@@ -67,13 +73,13 @@ class ScrcpyRecorder {
     if (!await scrcpyFile.exists()) {
       Directory scrcpyDir = Directory(scrcpyDirPath);
       if (await scrcpyDir.exists()) {
-        await Isolate.run(() async{
+        await Isolate.run(() async {
           await scrcpyDir.delete(recursive: true);
         });
       }
       final bytes = await rootBundle.load(zipPath);
       final archive = ZipDecoder().decodeBytes(Uint8List.sublistView(bytes));
-      await Isolate.run(() async{
+      await Isolate.run(() async {
         await scrcpyDir.create(recursive: true);
       });
       for (var file in archive.files) {
@@ -81,13 +87,13 @@ class ScrcpyRecorder {
         final filePath = '$scrcpyDirPath${Platform.pathSeparator}$filename';
         if (file.isFile) {
           final outFile = File(filePath);
-          await Isolate.run(() async{
+          await Isolate.run(() async {
             await outFile.create(recursive: true);
             await outFile.writeAsBytes(file.content as List<int>, flush: true);
           });
           print('✅ Extracted file: $filePath');
         } else {
-          await Isolate.run(() async{
+          await Isolate.run(() async {
             await Directory(filePath).create(recursive: true);
           });
           print('📁 Created directory: $filePath');
@@ -104,7 +110,6 @@ class ScrcpyRecorder {
 
   String? _currentPath;
 
-
   /// 启动录屏
   Future<String?> startRecording(String serial) async {
     String time = getCurrentTimeFormatString();
@@ -118,12 +123,14 @@ class ScrcpyRecorder {
     try {
       print('🎬 启动 scrcpy 录屏...');
       _process = await Process.start(_executePath, [
-        '-s',serial,
-        '--record', outputPath,
+        '-s',
+        serial,
+        '--record',
+        outputPath,
       ], runInShell: true);
       _currentPath = outputPath;
-      _process?.stdout.transform(utf8.decoder).listen((d){});
-      _process?.stderr.transform(utf8.decoder).listen((d){});
+      _process?.stdout.transform(utf8.decoder).listen((d) {});
+      _process?.stderr.transform(utf8.decoder).listen((d) {});
 
       // 监听进程结束
       _process!.exitCode.then((code) {
@@ -150,16 +157,18 @@ class ScrcpyRecorder {
     print('🛑 停止 scrcpy 录屏...');
     try {
       String? result = _currentPath;
-      if(Platform.isMacOS){
+      if (Platform.isMacOS) {
         bool k = Process.killPid(temp.pid, ProcessSignal.sigint);
-      print('🛑 停止 scrcpy 录屏... $k');
-      await temp.exitCode;
-      }else if(Platform.isWindows){
-    
-         final kill_result= await Process.run('taskkill', ['/IM','scrcpy.exe']);
-         print('kill_result:${kill_result.exitCode}}');
+        print('🛑 停止 scrcpy 录屏... $k');
+        await temp.exitCode;
+      } else if (Platform.isWindows) {
+        final kill_result = await Process.run('taskkill', [
+          '/IM',
+          'scrcpy.exe',
+        ]);
+        print('kill_result:${kill_result.exitCode}}');
       }
-      
+
       if (result != null && await File(result).exists()) {
         return result;
       }

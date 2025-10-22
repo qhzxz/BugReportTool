@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:isolate';
 
+import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/model/setting.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
 import 'package:bug_report_tool/util/constatnts.dart';
@@ -13,14 +14,9 @@ class SaveSettingUsecase extends UseCase<bool> {
   SaveSettingUsecase(this._settings);
 
   @override
-  Future<bool> execute() async {
-    try {
-      String json = jsonEncode(_settings.toJson());
-      SharedPreferences preferences = await SharedPreferences.getInstance();
-      return preferences.setString(Constants.SETTING_KEY, json);
-    } catch (e) {
-      print(e);
-    }
-    return false;
+  Future<Result<bool>> run() async {
+    String json = jsonEncode(_settings.toJson());
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    return Success(await preferences.setString(Constants.SETTING_KEY, json));
   }
 }

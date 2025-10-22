@@ -1,3 +1,4 @@
+import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/model/setting.dart';
 import 'package:bug_report_tool/usecase/get_setting_usecase.dart';
 import 'package:bug_report_tool/usecase/save_setting_usecase.dart';
@@ -27,9 +28,12 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     GetSettingUsecase().execute().then((s) {
-      setState(() {
-        viewModel.updateSetting(s);
-      });
+      if (s is Success) {
+        setState(() {
+          viewModel.updateSetting((s as Success<Setting>).result);
+        });
+      }
+
     });
   }
 
@@ -51,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 enable: !viewModel.setting.enableVoiceRecording,
               );
               SaveSettingUsecase(copy).execute().then((r) {
-                if (r) {
+                if (r is Success && (r as Success<bool>).result) {
                   setState(() {
                     viewModel.updateSetting(copy);
                   });
@@ -77,7 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Setting s = viewModel.setting.copy(
                       email: viewModel.tempEmail);
                   SaveSettingUsecase(s).execute().then((r) {
-                    if (r) {
+                    if (r is Success && (r as Success<bool>).result) {
                       setState(() {
                         viewModel.updateSetting(s);
                       });

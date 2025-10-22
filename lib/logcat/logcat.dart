@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -70,10 +71,10 @@ class Logcat {
         'logcat',
       ], runInShell: true);
       _currentPath = outputPath;
-      _process!.stdout.transform(SystemEncoding().decoder).listen((data) {
+      _process!.stdout.transform(utf8.decoder).listen((data) {
         workerSendPort.send(data);
       });
-      _process!.stderr.transform(SystemEncoding().decoder).listen((data) {
+      _process!.stderr.transform(utf8.decoder).listen((data) {
         workerSendPort.send(data);
       });
 

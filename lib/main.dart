@@ -69,16 +69,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -89,7 +79,10 @@ class _MyHomePageState extends State<MyHomePage> {
   ReportViewModel reportViewModel = ReportViewModel();
   SettingsViewModel settingsViewModel = SettingsViewModel();
   final List<String> menus = ['上报BUG', '历史记录','设置'];
-
+  GlobalKey<ReportPageState> reportKey = GlobalKey();
+  GlobalKey<HistoryPageState> historyKey = GlobalKey();
+  GlobalKey<SettingsPageState> settingKey = GlobalKey();
+  late final List<GlobalKey<TabPageState>> keyList;
   late final List<Widget> pages;
 
   int _selectedIndex = 0;
@@ -97,14 +90,15 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    keyList = [reportKey, historyKey,settingKey];
     pages = [
-      ReportPage(reportViewModel: reportViewModel,
+      ReportPage(key: reportKey,reportViewModel: reportViewModel,
           settingViewModel: settingsViewModel,
           jiraConfigRepository: JIRA_CONFIG_REPOSITORY,
           jiraRestRepository: JIRA_REST_REPOSITORY,
           jiraRepository: JIRA_REPOSITORY),
-      HistoryPage(jiraRepository: JIRA_REPOSITORY,jiraRestRepository: JIRA_REST_REPOSITORY),
-      SettingsPage(viewModel: settingsViewModel)
+      HistoryPage(key: historyKey,jiraRepository: JIRA_REPOSITORY,jiraRestRepository: JIRA_REST_REPOSITORY),
+      SettingsPage(key: settingKey,viewModel: settingsViewModel)
     ];
   }
 
@@ -124,8 +118,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   title: Text(menus[index]),
                   selected: _selectedIndex == index,
                   onTap: () {
+                    _selectedIndex = index;
+                    keyList[_selectedIndex].currentState?.onTabSelect();
                     setState(() {
-                      _selectedIndex = index;
+
                     });
                   },
                 );
@@ -143,5 +139,12 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+}
 
+abstract class TabPageState <T extends StatefulWidget> extends State<T> with OnTabSelectedListener{
+
+}
+
+mixin OnTabSelectedListener{
+  void onTabSelect();
 }

@@ -1,3 +1,4 @@
+import 'package:bug_report_tool/main.dart';
 import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../model/status.dart';
 import '../model/ticket.dart';
+import '../widget/loading_dialog.dart';
 
 class HistoryPage extends StatefulWidget {
   final JiraRepository _jiraRepository;
@@ -21,17 +23,22 @@ class HistoryPage extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
-    return _HistoryPageState(_jiraRepository,_jiraRestRepository);
+    return HistoryPageState(_jiraRepository,_jiraRestRepository);
   }
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+class HistoryPageState extends TabPageState<HistoryPage> {
   final JiraRepository _jiraRepository;
   final JiraRestRepository _jiraRestRepository;
   final HistoryViewModel historyViewModel = HistoryViewModel();
 
-  _HistoryPageState(this._jiraRepository, this._jiraRestRepository);
+  HistoryPageState(this._jiraRepository, this._jiraRestRepository);
 
+  @override
+  void didUpdateWidget(covariant HistoryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('_HistoryPageState didUpdateWidget');
+  }
 
   @override
   void initState() {
@@ -62,10 +69,14 @@ class _HistoryPageState extends State<HistoryPage> {
               ticketId: list[index].ticketId,
               callback: () {
                 if (list[index].status!=Status.JIRA_ATTACHMENTS_UPLOADED) {
+                  showDialog(context: context,
+                      barrierDismissible: false,
+                      builder: (context) => LoadingDialog(text: '正在重新上报BUG...'));
                   ReuploadTicketUsecase(
                       list[index], _jiraRestRepository, _jiraRepository)
                       .execute()
                       .then((r) {
+                    Navigator.of(context).pop();
                     if (r is Success) {
                       GetTicketUsecase(_jiraRepository).execute().then((r) {
                         if (r is Success) {
@@ -75,6 +86,8 @@ class _HistoryPageState extends State<HistoryPage> {
                         }
                       });
                     }
+                  }).catchError((e){
+                    Navigator.of(context).pop();
                   });
                 }
               },
@@ -83,5 +96,16 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void onTabSelect() {
+    GetTicketUsecase(_jiraRepository).execute().then((r) {
+      if (r is Success) {
+        setState(() {
+          historyViewModel.updateHistory((r as Success<List<Ticket>>).result);
+        });
+      }
+    });
   }
 }

@@ -78,7 +78,7 @@ class ReportViewModel {
   void updateZipFilePath(String path) {
     _currentZipFilePath = path;
   }
-  CreateTicketParam? getParam() {
+  CreateTicketParam? getParam(String? reportEmail) {
     final currentAppJiraConfigList = _currentAppJiraConfigList;
     if (currentAppJiraConfigList == null) return null;
     if (_currentAppPackage.isEmpty) return null;
@@ -88,10 +88,13 @@ class ReportViewModel {
     Map<String, String> environment = {};
     environment.addAll(_currentVersionMap);
     environment['system_info:'] = _currentSystemInfo;
-    print("currentVersionMap:$_currentVersionMap");
-
+    var appJiraConfig = currentAppJiraConfigList[index];
+    if (reportEmail!=null&& reportEmail.isNotEmpty) {
+      appJiraConfig.jiraFields.fields['reporter'] =
+      {'emailAddress': reportEmail, 'name': reportEmail};
+    }
     return CreateTicketParam(currentDevice,
-        currentAppJiraConfigList[index], summary, description,
+        appJiraConfig, summary, description,
         [_currentZipFilePath], environment);
   }
 

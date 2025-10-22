@@ -1,3 +1,4 @@
+import 'package:bug_report_tool/main.dart';
 import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/model/setting.dart';
 import 'package:bug_report_tool/usecase/get_setting_usecase.dart';
@@ -16,24 +17,24 @@ class SettingsPage extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
-    return _SettingsPageState(viewModel);
+    return SettingsPageState(viewModel);
   }
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class SettingsPageState extends TabPageState<SettingsPage> {
   final SettingsViewModel viewModel;
 
-  _SettingsPageState(this.viewModel);
+  SettingsPageState(this.viewModel);
 
   @override
   void initState() {
+    super.initState();
     GetSettingUsecase().execute().then((s) {
       if (s is Success) {
         setState(() {
           viewModel.updateSetting((s as Success<Setting>).result);
         });
       }
-
     });
   }
 
@@ -110,5 +111,16 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void onTabSelect() {
+    GetSettingUsecase().execute().then((s) {
+      if (s is Success) {
+        setState(() {
+          viewModel.updateSetting((s as Success<Setting>).result);
+        });
+      }
+    });
   }
 }

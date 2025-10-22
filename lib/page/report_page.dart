@@ -2,7 +2,9 @@
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:bug_report_tool/main.dart';
 import 'package:bug_report_tool/model/result.dart';
+import 'package:bug_report_tool/model/ticket.dart';
 import 'package:bug_report_tool/repository/jira_config_repository.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
@@ -46,12 +48,12 @@ class ReportPage extends StatefulWidget{
 
   @override
   State<StatefulWidget> createState() {
-    return _ReportPageState(reportViewModel, settingViewModel,_jiraConfigRepository, _jiraRestRepository, _jiraRepository);
+    return ReportPageState(reportViewModel, settingViewModel,_jiraConfigRepository, _jiraRestRepository, _jiraRepository);
   }
 
 }
 
-class _ReportPageState extends State<ReportPage>{
+class ReportPageState extends TabPageState<ReportPage>{
   final ReportViewModel reportViewModel;
   final SettingsViewModel settingsViewModel;
   final JiraConfigRepository _jiraConfigRepository;
@@ -60,11 +62,15 @@ class _ReportPageState extends State<ReportPage>{
 
   late Function onError;
 
-  _ReportPageState(this.reportViewModel, this.settingsViewModel,
+  ReportPageState(this.reportViewModel, this.settingsViewModel,
       this._jiraConfigRepository, this._jiraRestRepository,
       this._jiraRepository);
 
 
+  @override
+  void onTabSelect() {
+
+  }
 
   @override
   void initState() {
@@ -99,9 +105,15 @@ class _ReportPageState extends State<ReportPage>{
 ) async {
     Result<String> videoResult = await StopScreenRecordUsecase().execute();
     Result<String> logResult = await StopLogcatUsecase().execute();
-    Result<String> audioResult = await StopVoiceRecordingUsecase().execute();
+    Result<String> audioResult;
+    if (settingsViewModel.setting.enableVoiceRecording) {
+      audioResult = await StopVoiceRecordingUsecase().execute();
+    } else {
+      audioResult = Error(exception: 'audio recording is disable');
+    }
+
     if (videoResult is Error) {
-      throw Exception('缺少音频');
+      throw Exception('缺少视频');
     }
     if (logResult is Error) {
       throw Exception('缺少日志');
@@ -148,7 +160,7 @@ class _ReportPageState extends State<ReportPage>{
   }
 
 
-  void onClick(BuildContext context) {
+  void onClick() {
     if (reportViewModel.currentDevice.isEmpty) {
       _listDevices();
       return;
@@ -169,7 +181,7 @@ class _ReportPageState extends State<ReportPage>{
               context: context,
               barrierDismissible: false,
               builder: (BuildContext context) {
-                return _showConfirmDialog(context);
+                return _showConfirmDialog();
               },
             );
           }
@@ -206,7 +218,7 @@ class _ReportPageState extends State<ReportPage>{
     }
   }
 
-  Widget _showConfirmDialog(BuildContext context){
+  Widget _showConfirmDialog(){
     return AlertDialog(
       insetPadding: EdgeInsets.only(left: 50,right: 50,top: 30,bottom: 30),
       title: Text('视频录制完成是否上传Bug'),
@@ -222,7 +234,7 @@ class _ReportPageState extends State<ReportPage>{
           child: Text('确定'),
           onPressed: () {
             Navigator.of(context).pop();
-            // _reportIssue(context);
+            _reportIssue();
           },
         ),
       ],
@@ -238,19 +250,45 @@ class _ReportPageState extends State<ReportPage>{
     });
   }
 
-  void _reportIssue(BuildContext context) async {
+  void _reportIssue() async {
     showDialog(context: context,
+        barrierDismissible: false,
         builder: (context) => LoadingDialog(text: '正在上报BUG...'));
     let(
-      reportViewModel.getParam(),
-          (p) =>
+        reportViewModel.getParam(settingsViewModel.setting.reporterEmail),
+            (p) {
           CreateTicketUseCase(
               _jiraRestRepository, _jiraRepository, p)
               .execute().then((r) {
             Navigator.of(context).pop();
+            if (r is Success<Ticket>) {
+              showDialog(context: context, builder: (context) =>
+                  AlertDialog(
+                    title: Text("创建${r.result.ticketId}成功  🎉"), actions: [
+                    TextButton(onPressed: () {
+                      Navigator.of(context).pop();
+                    }, child: Text('确定'))
+                  ]));
+            }else {
+              showDialog(context: context, builder: (context) =>
+                  AlertDialog(
+                      title: Text('创建失败，请在历史记录页面重试'), actions: [
+                    TextButton(onPressed: () {
+                      Navigator.of(context).pop();
+                    }, child: Text('确定'))
+                  ]));
+            }
           }).onError((e, s) {
             Navigator.of(context).pop();
-          }),
+            showDialog(context: context, builder: (context) =>
+                AlertDialog(
+                    title: Text('创建失败，请在历史记录页面重试'), actions: [
+                  TextButton(onPressed: () {
+                    Navigator.of(context).pop();
+                  }, child: Text('确定'))
+                ]));
+          });
+        }
     );
   }
 
@@ -275,8 +313,14 @@ class _ReportPageState extends State<ReportPage>{
         reportViewModel.currentDevice).execute();
     Result logResult = await StartLogcatUsecase(
         reportViewModel.currentDevice).execute();
-    Result audioResult = await StartVoiceRecordingUsecasse(
-        reportViewModel.currentDevice).execute();
+    if (settingsViewModel.setting.enableVoiceRecording) {
+      Result audioResult = await StartVoiceRecordingUsecasse(
+          reportViewModel.currentDevice).execute();
+      if ((audioResult is Success<bool> && !audioResult.result) ||
+          audioResult is Error) {
+        return false;
+      }
+    }
     if ((videoResult is Success<bool> && !videoResult.result) ||
         videoResult is Error) {
       return false;
@@ -285,10 +329,7 @@ class _ReportPageState extends State<ReportPage>{
         logResult is Error) {
       return false;
     }
-    if ((audioResult is Success<bool> && !audioResult.result) ||
-        audioResult is Error) {
-      return false;
-    }
+
     return true;
   }
 
@@ -387,7 +428,7 @@ class _ReportPageState extends State<ReportPage>{
               alignment: Alignment.topCenter,
               child: ElevatedButton(
                 onPressed: () {
-                  onClick(context);
+                  onClick();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue, // 按钮背景色

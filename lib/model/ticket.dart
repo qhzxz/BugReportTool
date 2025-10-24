@@ -16,6 +16,7 @@ class Ticket {
   Status status;
   final int createdAt;
   int? finishedAt;
+  final String? url;
 
   Ticket(this.id,
       this.ticketId,
@@ -28,7 +29,8 @@ class Ticket {
       this.appPackageName,
       this.status,
       this.createdAt,
-      this.finishedAt);
+      this.finishedAt,
+      this.url);
 
   TicketEntityData toEntity() {
     return TicketEntityData(
@@ -57,7 +59,8 @@ class Ticket {
     String? appPackageName,
     Status? status,
     int, createdAt,
-    int? finishedAt}) =>
+    int? finishedAt,
+    String? url}) =>
       Ticket(
           id ?? this.id,
           ticketId ?? this.ticketId,
@@ -70,12 +73,13 @@ class Ticket {
           appPackageName ?? this.appPackageName,
           status ?? this.status,
           createdAt ?? this.createdAt,
-          finishedAt ?? this.finishedAt
+          finishedAt ?? this.finishedAt,
+          url ?? this.url
       );
 
   @override
   String toString() {
-    return 'Ticket{id: $id, ticketId: $ticketId, projectKey: $projectKey, title: $title, reporter: $reporter, assignee: $assignee, fieldsJson: $fieldsJson, attachments: $attachments, appPackageName: $appPackageName, status: $status, createdAt: $createdAt, finishedAt: $finishedAt}';
+    return 'Ticket{id: $id, ticketId: $ticketId, projectKey: $projectKey, title: $title, reporter: $reporter, assignee: $assignee, fieldsJson: $fieldsJson, attachments: $attachments, appPackageName: $appPackageName, status: $status, createdAt: $createdAt, finishedAt: $finishedAt, url: $url}';
   }
 
 

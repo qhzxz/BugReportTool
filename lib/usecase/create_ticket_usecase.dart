@@ -58,6 +58,7 @@ class CreateTicketUseCase extends UseCase<Ticket>{
         DateTime
             .now()
             .millisecondsSinceEpoch,
+        null,
         null);
   }
 
@@ -76,7 +77,7 @@ class CreateTicketUseCase extends UseCase<Ticket>{
     if (ticketResp != null) {
       var key = ticketResp.key;
       if (key != null) {
-        ticket = ticket.copyWith(ticketId: key,status: Status.JIRA_CREATED);
+        ticket = ticket.copyWith(ticketId: key,status: Status.JIRA_CREATED,url: ticketResp.self);
         print("ticket:$ticket");
         await compute(_jiraRepository.updateTicket, ticket);
         try {

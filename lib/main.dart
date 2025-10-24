@@ -31,7 +31,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final dbFolder = await getApplicationDocumentsDirectory();
-  final file = File(p.join(dbFolder.path, 'db.sqlite'));
+  final file = File(p.join(dbFolder.path, 'bug_report_tool.sqlite'));
+  print("db file:${file.path}");
   JIRA_REPOSITORY = JiraRepository(TicketDao(AppDatabase(file)));
   await GetFileDirUsecase().then((d) async {
     await ScrcpyRecorder.init(d);

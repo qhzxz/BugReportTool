@@ -6,11 +6,14 @@ part 'create_ticket_resp.g.dart';
 
 @JsonSerializable()
 class CreateTicketResp {
+
+  final String? self;
+
   final String? key;
 
   final Map<String, String>? errors;
 
-  CreateTicketResp(this.key, this.errors);
+  CreateTicketResp(this.self, this.key, this.errors);
 
   /// 由生成的代码实现
   factory CreateTicketResp.fromJson(Map<String, dynamic> json) => _$CreateTicketRespFromJson(json);

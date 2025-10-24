@@ -37,6 +37,8 @@ class TicketEntity extends Table {
 
   IntColumn get finishedAt => integer().named('finished_at').nullable()();
 
+  TextColumn get url => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -82,5 +84,7 @@ Ticket toTicket(TicketEntityData d) {
       d.appPackageName,
       d.status,
       d.createdAt,
-      d.finishedAt);
+      d.finishedAt,
+      d.url
+  );
 }

@@ -27,6 +27,7 @@ import 'package:bug_report_tool/widget//app_menu.dart';
 import 'package:bug_report_tool/widget/edit_text.dart';
 import 'package:bug_report_tool/widget/loading_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../model/app_jira_config.dart';
 import '../usecase/zip_file_usecase.dart';
@@ -266,6 +267,8 @@ class ReportPageState extends TabPageState<ReportPage>{
                   AlertDialog(
                     title: Text("创建${r.result.ticketId}成功  🎉"), actions: [
                     TextButton(onPressed: () {
+                      final Uri url = Uri.parse('https://jira.telenav.com:8443/browse/${r.result.ticketId}');
+                      launchUrl(url);
                       Navigator.of(context).pop();
                     }, child: Text('确定'))
                   ]));

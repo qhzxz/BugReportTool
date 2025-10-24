@@ -67,6 +67,7 @@ class HistoryPageState extends TabPageState<HistoryPage> {
               ticketTitle: list[index].title,
               status: list[index].status,
               ticketId: list[index].ticketId,
+              urlStr:  'https://jira.telenav.com:8443/browse/${list[index].ticketId}',
               callback: () {
                 if (list[index].status!=Status.JIRA_ATTACHMENTS_UPLOADED) {
                   showDialog(context: context,

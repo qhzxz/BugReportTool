@@ -135,6 +135,15 @@ class $TicketEntityTable extends TicketEntity
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -149,6 +158,7 @@ class $TicketEntityTable extends TicketEntity
     status,
     createdAt,
     finishedAt,
+    url,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -238,6 +248,12 @@ class $TicketEntityTable extends TicketEntity
         finishedAt.isAcceptableOrUnknown(data['finished_at']!, _finishedAtMeta),
       );
     }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    }
     return context;
   }
 
@@ -299,6 +315,10 @@ class $TicketEntityTable extends TicketEntity
         DriftSqlType.int,
         data['${effectivePrefix}finished_at'],
       ),
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      ),
     );
   }
 
@@ -326,6 +346,7 @@ class TicketEntityData extends DataClass
   final Status status;
   final int createdAt;
   final int? finishedAt;
+  final String? url;
   const TicketEntityData({
     required this.id,
     this.ticketId,
@@ -339,6 +360,7 @@ class TicketEntityData extends DataClass
     required this.status,
     required this.createdAt,
     this.finishedAt,
+    this.url,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -367,6 +389,9 @@ class TicketEntityData extends DataClass
     if (!nullToAbsent || finishedAt != null) {
       map['finished_at'] = Variable<int>(finishedAt);
     }
+    if (!nullToAbsent || url != null) {
+      map['url'] = Variable<String>(url);
+    }
     return map;
   }
 
@@ -388,6 +413,7 @@ class TicketEntityData extends DataClass
       finishedAt: finishedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(finishedAt),
+      url: url == null && nullToAbsent ? const Value.absent() : Value(url),
     );
   }
 
@@ -409,6 +435,7 @@ class TicketEntityData extends DataClass
       status: serializer.fromJson<Status>(json['status']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       finishedAt: serializer.fromJson<int?>(json['finishedAt']),
+      url: serializer.fromJson<String?>(json['url']),
     );
   }
   @override
@@ -427,6 +454,7 @@ class TicketEntityData extends DataClass
       'status': serializer.toJson<Status>(status),
       'createdAt': serializer.toJson<int>(createdAt),
       'finishedAt': serializer.toJson<int?>(finishedAt),
+      'url': serializer.toJson<String?>(url),
     };
   }
 
@@ -443,6 +471,7 @@ class TicketEntityData extends DataClass
     Status? status,
     int? createdAt,
     Value<int?> finishedAt = const Value.absent(),
+    Value<String?> url = const Value.absent(),
   }) => TicketEntityData(
     id: id ?? this.id,
     ticketId: ticketId.present ? ticketId.value : this.ticketId,
@@ -456,6 +485,7 @@ class TicketEntityData extends DataClass
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     finishedAt: finishedAt.present ? finishedAt.value : this.finishedAt,
+    url: url.present ? url.value : this.url,
   );
   TicketEntityData copyWithCompanion(TicketEntityCompanion data) {
     return TicketEntityData(
@@ -481,6 +511,7 @@ class TicketEntityData extends DataClass
       finishedAt: data.finishedAt.present
           ? data.finishedAt.value
           : this.finishedAt,
+      url: data.url.present ? data.url.value : this.url,
     );
   }
 
@@ -498,7 +529,8 @@ class TicketEntityData extends DataClass
           ..write('appPackageName: $appPackageName, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
-          ..write('finishedAt: $finishedAt')
+          ..write('finishedAt: $finishedAt, ')
+          ..write('url: $url')
           ..write(')'))
         .toString();
   }
@@ -517,6 +549,7 @@ class TicketEntityData extends DataClass
     status,
     createdAt,
     finishedAt,
+    url,
   );
   @override
   bool operator ==(Object other) =>
@@ -533,7 +566,8 @@ class TicketEntityData extends DataClass
           other.appPackageName == this.appPackageName &&
           other.status == this.status &&
           other.createdAt == this.createdAt &&
-          other.finishedAt == this.finishedAt);
+          other.finishedAt == this.finishedAt &&
+          other.url == this.url);
 }
 
 class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
@@ -549,6 +583,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
   final Value<Status> status;
   final Value<int> createdAt;
   final Value<int?> finishedAt;
+  final Value<String?> url;
   final Value<int> rowid;
   const TicketEntityCompanion({
     this.id = const Value.absent(),
@@ -563,6 +598,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.finishedAt = const Value.absent(),
+    this.url = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TicketEntityCompanion.insert({
@@ -578,6 +614,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
     required Status status,
     required int createdAt,
     this.finishedAt = const Value.absent(),
+    this.url = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        projectKey = Value(projectKey),
@@ -602,6 +639,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
     Expression<int>? status,
     Expression<int>? createdAt,
     Expression<int>? finishedAt,
+    Expression<String>? url,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -617,6 +655,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
       if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
       if (finishedAt != null) 'finished_at': finishedAt,
+      if (url != null) 'url': url,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -634,6 +673,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
     Value<Status>? status,
     Value<int>? createdAt,
     Value<int?>? finishedAt,
+    Value<String?>? url,
     Value<int>? rowid,
   }) {
     return TicketEntityCompanion(
@@ -649,6 +689,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       finishedAt: finishedAt ?? this.finishedAt,
+      url: url ?? this.url,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -696,6 +737,9 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
     if (finishedAt.present) {
       map['finished_at'] = Variable<int>(finishedAt.value);
     }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -717,6 +761,7 @@ class TicketEntityCompanion extends UpdateCompanion<TicketEntityData> {
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('finishedAt: $finishedAt, ')
+          ..write('url: $url, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -748,6 +793,7 @@ typedef $$TicketEntityTableCreateCompanionBuilder =
       required Status status,
       required int createdAt,
       Value<int?> finishedAt,
+      Value<String?> url,
       Value<int> rowid,
     });
 typedef $$TicketEntityTableUpdateCompanionBuilder =
@@ -764,6 +810,7 @@ typedef $$TicketEntityTableUpdateCompanionBuilder =
       Value<Status> status,
       Value<int> createdAt,
       Value<int?> finishedAt,
+      Value<String?> url,
       Value<int> rowid,
     });
 
@@ -837,6 +884,11 @@ class $$TicketEntityTableFilterComposer
     column: $table.finishedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$TicketEntityTableOrderingComposer
@@ -907,6 +959,11 @@ class $$TicketEntityTableOrderingComposer
     column: $table.finishedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TicketEntityTableAnnotationComposer
@@ -964,6 +1021,9 @@ class $$TicketEntityTableAnnotationComposer
     column: $table.finishedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
 }
 
 class $$TicketEntityTableTableManager
@@ -1009,6 +1069,7 @@ class $$TicketEntityTableTableManager
                 Value<Status> status = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int?> finishedAt = const Value.absent(),
+                Value<String?> url = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TicketEntityCompanion(
                 id: id,
@@ -1023,6 +1084,7 @@ class $$TicketEntityTableTableManager
                 status: status,
                 createdAt: createdAt,
                 finishedAt: finishedAt,
+                url: url,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1039,6 +1101,7 @@ class $$TicketEntityTableTableManager
                 required Status status,
                 required int createdAt,
                 Value<int?> finishedAt = const Value.absent(),
+                Value<String?> url = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TicketEntityCompanion.insert(
                 id: id,
@@ -1053,6 +1116,7 @@ class $$TicketEntityTableTableManager
                 status: status,
                 createdAt: createdAt,
                 finishedAt: finishedAt,
+                url: url,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

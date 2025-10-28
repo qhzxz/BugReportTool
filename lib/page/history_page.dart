@@ -8,6 +8,7 @@ import 'package:bug_report_tool/widget//ticket_card.dart';
 import 'package:bug_report_tool/viewmodel/history_view_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../model/status.dart';
 import '../model/ticket.dart';
@@ -78,7 +79,7 @@ class HistoryPageState extends TabPageState<HistoryPage> {
                       .execute()
                       .then((r) {
                     Navigator.of(context).pop();
-                    if (r is Success) {
+                    if (r is Success<Ticket>) {
                       GetTicketUsecase(_jiraRepository).execute().then((r) {
                         if (r is Success) {
                           setState(() {
@@ -86,8 +87,25 @@ class HistoryPageState extends TabPageState<HistoryPage> {
                           });
                         }
                       });
-                    }
-                  }).catchError((e){
+                      showDialog(context: context, builder: (context) =>
+                          AlertDialog(
+                              title: Text("创建${r.result.ticketId}成功  🎉"), actions: [
+                            TextButton(onPressed: () {
+                              final Uri url = Uri.parse('https://jira.telenav.com:8443/browse/${r.result.ticketId}');
+                              launchUrl(url);
+                              Navigator.of(context).pop();
+                            }, child: Text('确定'))
+                          ]));
+                    }else {
+                      showDialog(context: context, builder: (context) =>
+                          AlertDialog(
+                              title: Text('创建失败，请在历史记录页面重试'),
+                              content:Text('${(r as Error).exception?.toString()}'),actions: [
+                            TextButton(onPressed: () {
+                              Navigator.of(context).pop();
+                            }, child: Text('确定'))
+                          ]));
+                    }}).catchError((e){
                     Navigator.of(context).pop();
                   });
                 }

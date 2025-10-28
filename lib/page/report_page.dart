@@ -104,11 +104,17 @@ class ReportPageState extends TabPageState<ReportPage>{
 
   Future<String?> _stopCapturing(
 ) async {
-    Result<String> videoResult = await StopScreenRecordUsecase().execute();
-    Result<String> logResult = await StopLogcatUsecase().execute();
-    Result<String> audioResult;
+    var futureVideo = StopScreenRecordUsecase().execute();
+    var futureLog = StopLogcatUsecase().execute();
+    var futureAudio;
     if (settingsViewModel.setting.enableVoiceRecording) {
-      audioResult = await StopVoiceRecordingUsecase().execute();
+      futureAudio = StopVoiceRecordingUsecase().execute();
+    }
+    Result<String> videoResult = await futureVideo;
+    Result<String> logResult = await futureLog;
+    Result<String> audioResult;
+    if (futureAudio != null) {
+      audioResult = await futureAudio;
     } else {
       audioResult = Error(exception: 'audio recording is disable');
     }
@@ -275,7 +281,8 @@ class ReportPageState extends TabPageState<ReportPage>{
             }else {
               showDialog(context: context, builder: (context) =>
                   AlertDialog(
-                      title: Text('创建失败，请在历史记录页面重试'), actions: [
+                      title: Text('创建失败，请在历史记录页面重试'),
+                      content:Text('${(r as Error).exception?.toString()}'),actions: [
                     TextButton(onPressed: () {
                       Navigator.of(context).pop();
                     }, child: Text('确定'))
@@ -312,13 +319,19 @@ class ReportPageState extends TabPageState<ReportPage>{
   }
 
   Future<bool> _startCapturing() async {
-    Result videoResult = await StartScreenRecordUsecase(
+    var futureVideo = StartScreenRecordUsecase(
         reportViewModel.currentDevice).execute();
-    Result logResult = await StartLogcatUsecase(
+    var futureLog = StartLogcatUsecase(
         reportViewModel.currentDevice).execute();
+    var futureAudio;
     if (settingsViewModel.setting.enableVoiceRecording) {
-      Result audioResult = await StartVoiceRecordingUsecasse(
+      futureAudio = StartVoiceRecordingUsecasse(
           reportViewModel.currentDevice).execute();
+    }
+    Result videoResult = await futureVideo;
+    Result logResult = await futureLog;
+    if (futureAudio != null) {
+      Result audioResult = await futureAudio;
       if ((audioResult is Success<bool> && !audioResult.result) ||
           audioResult is Error) {
         return false;

@@ -32,7 +32,11 @@ class ReuploadTicketUsecase extends UseCase<Ticket>{
             temp =
                 temp.copyWith(ticketId: resp.key, status: Status.JIRA_CREATED);
             await compute(_repository.updateTicket, temp);
+          }else {
+            return Error(exception: resp.errors);
           }
+        }else {
+          return Error(exception: '响应异常');
         }
       }
       catch (e) {

@@ -108,10 +108,10 @@ class CreateTicketUseCase extends UseCase<Ticket>{
           return Error(exception: e);
         }
       } else {
-        return Error();
+        return Error(exception: ticketResp.errors);
       }
     }else{
-      return Error();
+      return Error(exception: '响应异常');
     }
     return Success(ticket);
 

@@ -56,7 +56,7 @@ class JiraConfigRepository {
       var path = f.path;
       if (path.endsWith('.json')) {
         final project = path.substring(
-            path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
+            path.lastIndexOf(Platform.pathSeparator) + 1, path.lastIndexOf('.'));
         result[project]=[];
         String json = await Isolate.run(() async {
           return await File(path).readAsString();

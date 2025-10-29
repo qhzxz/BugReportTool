@@ -69,34 +69,16 @@ class SettingsPageState extends TabPageState<SettingsPage> {
               });
             },
           ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              EditText(
-                hint: "报告人邮箱:",
-                maxLine: 1,
-                minLine: 1,
-                onChanged: (text) {
-                  viewModel.updateTempEmail(text);
-                },
-                defaultValue: viewModel.setting.reporterEmail,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              SizedBox(width: 25),
-              ElevatedButton(
+          SizedBox(width: 25, height: 25),
+          Container(alignment: Alignment.centerLeft,
+              margin: EdgeInsets.only(left: 50), child: ElevatedButton(
                 onPressed: () {
-                  Setting s = viewModel.setting.copy(
-                    email: viewModel.tempEmail,
-                  );
-                  SaveSettingUsecase(s).execute().then((r) {
-                    if (r is Success && (r as Success<bool>).result) {
-                      setState(() {
-                        viewModel.updateSetting(s);
-                      });
+                  GetJsonDirUsecase().then((s) {
+                    if (s != null) {
+                      openDirectory(s);
                     }
                   });
                 },
-                child: Text("保存"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   // 背景色
@@ -112,64 +94,41 @@ class SettingsPageState extends TabPageState<SettingsPage> {
                     vertical: 12,
                   ), // 内边距
                 ),
-              ),
-            ],
+                child: Text('打开本地JSON文件目录'),
+              )),
+          SizedBox(width: 25, height: 25),
+          Container(alignment: Alignment.centerLeft,
+              margin: EdgeInsets.only(left: 50),
+              child: ElevatedButton(
+                onPressed: () {
+                  ResetJsonUsecase().then((s) {
+                    showDialog(context: context, builder: (context) =>
+                        AlertDialog(title: Text('已重置，现在需要重新启动应用'),
+                            actions: [TextButton(onPressed: () {
+                              exit(0);
+                            }, child: Text(
+                                '确定'))
+                            ]));
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  // 背景色
+                  foregroundColor: Colors.white,
+                  // 字体颜色
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16), // 圆角半径
+                  ),
+                  elevation: 4,
+                  // 阴影
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ), // 内边距
+                ),
+                child: Text('恢复默认JSON文件'),
+              )
           ),
-          SizedBox(width: 25,height: 25),
-          ElevatedButton(
-            onPressed: () {
-              GetJsonDirUsecase().then((s) {
-                if (s != null) {
-                  openDirectory(s);
-                }
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              // 背景色
-              foregroundColor: Colors.white,
-              // 字体颜色
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16), // 圆角半径
-              ),
-              elevation: 4,
-              // 阴影
-              padding: EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ), // 内边距
-            ),
-            child: Text('打开本地JSON文件目录'),
-          ),SizedBox(width: 25,height: 25),
-          ElevatedButton(
-            onPressed: () {
-              ResetJsonUsecase().then((s) {
-                showDialog(context: context, builder: (context) =>
-                    AlertDialog(title: Text('已重置，现在需要重新启动应用'),
-                        actions: [TextButton(onPressed: () {
-                          exit(0);
-                        }, child: Text(
-                            '确定'))
-                        ]));
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              // 背景色
-              foregroundColor: Colors.white,
-              // 字体颜色
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16), // 圆角半径
-              ),
-              elevation: 4,
-              // 阴影
-              padding: EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ), // 内边距
-            ),
-            child: Text('恢复默认JSON文件'),
-          )
         ],
       ),
     );

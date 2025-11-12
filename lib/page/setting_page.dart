@@ -45,7 +45,7 @@ class SettingsPageState extends TabPageState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    print('email build:${viewModel.setting.reporterEmail}');
+    logInfo('email build:${viewModel.setting.reporterEmail}');
     return Scaffold(
       body: Column(
         children: [

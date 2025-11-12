@@ -2,6 +2,8 @@ import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
 import 'package:bug_report_tool/video/scrcpy_video_recorder.dart';
 
+import '../util/util.dart';
+
 class StartScreenRecordUsecase extends UseCase<bool> {
   String _serial;
 
@@ -11,7 +13,7 @@ class StartScreenRecordUsecase extends UseCase<bool> {
   Future<Result<bool>> run() async {
     final recorder = await ScrcpyRecorder.getInstance();
     String? path = await recorder.startRecording(_serial);
-    print('adb 录制视频开始:$path');
+    logInfo('adb 录制视频开始:$path');
     return Success(path != null);
   }
 }

@@ -47,7 +47,7 @@ class AndroidVideoRecorder {
     Isolate.run(() async {
       await runCmd('adb', ['-s', serial, 'shell', 'screenrecord $path']);
     });
-    print('adb 录制视频开始:$path');
+    logInfo('adb 录制视频开始:$path');
     return path;
   }
 
@@ -62,10 +62,10 @@ class AndroidVideoRecorder {
     ]);
     final pid = pidResult.stdout.toString().trim();
     if (pid.isEmpty) {
-      print('未检测到正在运行的 screenrecord 进程。');
+      logInfo('未检测到正在运行的 screenrecord 进程。');
       return null;
     }
-    print('检测到 screenrecord 进程 ID: $pid');
+    logInfo('检测到 screenrecord 进程 ID: $pid');
     // 2. 发送 SIGINT 信号（-2）优雅停止录制
     final killResult = await runCmd('adb', [
       '-s',
@@ -74,7 +74,7 @@ class AndroidVideoRecorder {
       'kill -2 $pid',
     ]);
     if (killResult.exitCode == 0) {
-      print('已发送 SIGINT，录制已停止。');
+      logInfo('已发送 SIGINT，录制已停止。');
     } else {
       stderr.writeln('发送终止信号失败: ${killResult.stderr.toString().trim()}');
     }

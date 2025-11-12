@@ -22,8 +22,8 @@ class MixVoiceUsecase extends UseCase<String> {
           '-c:v', 'copy',
           '-c:a', 'aac'
           , map['outputPath']!]);
-    print("error message:${result.stderr.toString()}");
-    print("return code：${result.exitCode}");
+    logInfo("error message:${result.stderr.toString()}");
+    logInfo("return code：${result.exitCode}");
   }
 
   @override

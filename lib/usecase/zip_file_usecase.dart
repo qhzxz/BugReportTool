@@ -21,7 +21,7 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     // 只读不进内存，而是归档时流式处理
     final file = File(path);
     if (!file.existsSync()) {
-      print("file:${path} 不存在");
+      logInfo("file:${path} 不存在");
       continue;
     }
     final stat = await file.stat();
@@ -35,7 +35,7 @@ Future<File?> _ZipFileUsecase(_Param p) async {
       );
       archive.addFile(archiveFile);
     } catch (e) {
-      print('$e');
+      logInfo('$e');
     }
   }
 
@@ -47,10 +47,10 @@ Future<File?> _ZipFileUsecase(_Param p) async {
     archive.files.forEach((element) async {
       await element.close();
     });
-    print("压缩文件成功:${archive.files.length}");
+    logInfo("压缩文件成功:${archive.files.length}");
     return File(p.dstZipPath);
   }
-  print("压缩文件失败");
+  logInfo("压缩文件失败");
   return null;
 }
 

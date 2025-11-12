@@ -27,7 +27,7 @@ Future<String> _DeriveFingerprintUsecase(_Context context) async {
         "${brand ?? ''}/${name ?? ''}/${device ?? ''}:"
         "${release ?? ''}/${buildId ?? ''}/${incremental ?? ''}:"
         "${type ?? ''}/${tags ?? ''}";
-    print("system info :$info");
+    logInfo("system info :$info");
     return info;
   }
 }

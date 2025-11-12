@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:intl/intl.dart';
+import 'package:logger/logger.dart';
 
 void let<T>(T? value, void Function(T) func) {
   if (value != null) func(value);
@@ -23,13 +24,18 @@ String getCurrentTimeFormatString() {
   return formatter.format(now);
 }
 
+Logger logger = Logger();
+
+void logInfo(String message){
+  logger.i(message);
+}
 
 
 Future<ProcessResult> runCmd(String execute, List<String> arguments) async {
   try {
     return await Process.run(execute, arguments);
   } catch (e) {
-    print("执行[$execute,$arguments]异常:$e");
+    logInfo("执行[$execute,$arguments]异常:$e");
     rethrow;
   }
 }

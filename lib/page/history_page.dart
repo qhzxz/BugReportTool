@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../model/status.dart';
 import '../model/ticket.dart';
+import '../util/util.dart';
 import '../widget/loading_dialog.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -38,7 +39,7 @@ class HistoryPageState extends TabPageState<HistoryPage> {
   @override
   void didUpdateWidget(covariant HistoryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print('_HistoryPageState didUpdateWidget');
+    logInfo('_HistoryPageState didUpdateWidget');
   }
 
   @override

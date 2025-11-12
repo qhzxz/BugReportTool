@@ -5,6 +5,7 @@ import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../model/app_jira_config.dart';
 import '../model/jira_field_config.dart';
+import '../util/util.dart';
 
 
 class JiraConfigRepository {
@@ -41,7 +42,7 @@ class JiraConfigRepository {
             try {
               sink.write(jsonString);
             } catch (e) {
-              print('$e');
+              logInfo('$e');
             } finally {
               await sink.flush();
               await sink.close();

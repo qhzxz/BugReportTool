@@ -7,6 +7,8 @@ import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 
+import '../util/util.dart';
+
 class JiraRestRepository {
 
   const JiraRestRepository();
@@ -34,13 +36,13 @@ class JiraRestRepository {
           body: array);
       if (resp.statusCode == HttpStatus.ok) {
         var decode = json.decode(utf8.decode(resp.bodyBytes));
-        print("上报BUG成功:${resp.statusCode},${resp.body}");
+        logInfo("上报BUG成功:${resp.statusCode},${resp.body}");
         return CreateTicketResp.fromJson(decode);
       }else {
-        print("上报BUG失败 code:${resp.statusCode}");
+        logInfo("上报BUG失败 code:${resp.statusCode}");
       }
     } catch (e) {
-      print("上报BUG失败:$e");
+      logInfo("上报BUG失败:$e");
     }
     return null;
   }
@@ -52,11 +54,11 @@ class JiraRestRepository {
     headers.addAll(UPLOAD_FILES_HEADERS);
     var request = http.MultipartRequest(
         'POST', Uri.parse("$UPLOAD_FILE_URL/$ticketId/attachments"));
-    print("添加上传文件filePathList:${filePathList}");
+    logInfo("添加上传文件filePathList:${filePathList}");
     for (var filePath in filePathList) {
       if (File(filePath).existsSync()) {
         var type = lookupMimeType(filePath);
-        print("添加上传文件:${filePath}");
+        logInfo("添加上传文件:${filePath}");
         request.files.add(await http.MultipartFile.fromPath('file', filePath,
             contentType: type == null ? null : MediaType.parse(type),
             filename: p.basename(filePath)));
@@ -65,7 +67,7 @@ class JiraRestRepository {
     request.headers.addAll(headers);
     StreamedResponse response = await request.send();
     if (response.statusCode == HttpStatus.ok) {
-      print("上传文件结果:${await response.stream.bytesToString()}");
+      logInfo("上传文件结果:${await response.stream.bytesToString()}");
       return true;
     }
     return false;

@@ -91,7 +91,7 @@ class ReportPageState extends TabPageState<ReportPage>{
       if(r is Success){
         Map<String, List<AppJiraConfig>> map = (r as Success).result;
         setState(() {
-          print("loadDefaultConfig");
+          logInfo("loadDefaultConfig");
           reportViewModel.configs.clear();
           reportViewModel.configs.addAll(map);
           reportViewModel.projects.clear();
@@ -199,7 +199,7 @@ class ReportPageState extends TabPageState<ReportPage>{
         setState(() {
           reportViewModel.isCapturing = false;
         });
-        print("_stopCapturing :$e");
+        logInfo("_stopCapturing :$e");
       });
     } else {
       showDialog(context: context,
@@ -220,7 +220,7 @@ class ReportPageState extends TabPageState<ReportPage>{
         setState(() {
           reportViewModel.isCapturing = false;
         });
-        print("_startCapturing :$e");
+        logInfo("_startCapturing :$e");
       });
     }
   }

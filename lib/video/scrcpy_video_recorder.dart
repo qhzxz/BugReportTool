@@ -61,7 +61,7 @@ class ScrcpyRecorder {
       final zipPath = 'assets/scrcpy/windows/scrcpy.zip';
       await _unzip(scrcpyDirPath, _executePath, zipPath);
     }
-    print("ScrcpyRecorder init finished");
+    logInfo("ScrcpyRecorder init finished");
   }
 
   static Future<void> _unzip(
@@ -91,12 +91,12 @@ class ScrcpyRecorder {
             await outFile.create(recursive: true);
             await outFile.writeAsBytes(file.content as List<int>, flush: true);
           });
-          print('✅ Extracted file: $filePath');
+          logInfo('✅ Extracted file: $filePath');
         } else {
           await Isolate.run(() async {
             await Directory(filePath).create(recursive: true);
           });
-          print('📁 Created directory: $filePath');
+          logInfo('📁 Created directory: $filePath');
         }
       }
     }
@@ -116,12 +116,12 @@ class ScrcpyRecorder {
     String outputPath = '$_APP_DIR${Platform.pathSeparator}video_$time.mp4';
     // 防止重复启动
     if (_process != null) {
-      print('⚠️ scrcpy 正在运行，不能重复启动。');
+      logInfo('⚠️ scrcpy 正在运行，不能重复启动。');
       return null;
     }
 
     try {
-      print('🎬 启动 scrcpy 录屏...');
+      logInfo('🎬 启动 scrcpy 录屏...');
       _process = await Process.start(_executePath, [
         '-s',
         serial,
@@ -134,13 +134,13 @@ class ScrcpyRecorder {
 
       // 监听进程结束
       _process!.exitCode.then((code) {
-        print('🛑 scrcpy 退出，代码: $code');
+        logInfo('🛑 scrcpy 退出，代码: $code');
         _process = null;
         _currentPath = null;
       });
       return outputPath;
     } catch (e) {
-      print('❌ 启动 scrcpy 失败: $e');
+      logInfo('❌ 启动 scrcpy 失败: $e');
       _process = null;
       _currentPath = null;
     }
@@ -150,23 +150,23 @@ class ScrcpyRecorder {
   /// 停止录屏
   Future<String?> stopRecording() async {
     if (_process == null) {
-      print('⚠️ 没有正在运行的 scrcpy 进程。');
+      logInfo('⚠️ 没有正在运行的 scrcpy 进程。');
       return null;
     }
     Process temp = _process!;
-    print('🛑 停止 scrcpy 录屏...');
+    logInfo('🛑 停止 scrcpy 录屏...');
     try {
       String? result = _currentPath;
       if (Platform.isMacOS) {
         bool k = Process.killPid(temp.pid, ProcessSignal.sigint);
-        print('🛑 停止 scrcpy 录屏... $k');
+        logInfo('🛑 停止 scrcpy 录屏... $k');
         await temp.exitCode;
       } else if (Platform.isWindows) {
         final kill_result = await Process.run('taskkill', [
           '/IM',
           'scrcpy.exe',
         ]);
-        print('kill_result:${kill_result.exitCode}}');
+        logInfo('kill_result:${kill_result.exitCode}}');
       }
 
       if (result != null && await File(result).exists()) {
@@ -174,7 +174,7 @@ class ScrcpyRecorder {
       }
       return null;
     } catch (e) {
-      print('❌ 停止 scrcpy 失败: $e');
+      logInfo('❌ 停止 scrcpy 失败: $e');
       return null;
     }
   }

@@ -16,6 +16,7 @@ import 'package:uuid/uuid.dart';
 import '../model/app_jira_config.dart';
 import '../model/jira_field_config.dart';
 import '../model/result.dart';
+import '../util/util.dart';
 
 class CreateTicketUseCase extends UseCase<Ticket>{
   final JiraRestRepository _jiraRestRepository;
@@ -78,7 +79,7 @@ class CreateTicketUseCase extends UseCase<Ticket>{
       var key = ticketResp.key;
       if (key != null) {
         ticket = ticket.copyWith(ticketId: key,status: Status.JIRA_CREATED,url: ticketResp.self);
-        print("ticket:$ticket");
+        logInfo("ticket:$ticket");
         await compute(_jiraRepository.updateTicket, ticket);
         try {
           var uploadResult = await UploadFileUsecase(
@@ -86,7 +87,7 @@ class CreateTicketUseCase extends UseCase<Ticket>{
             ticket.attachments,
             _jiraRestRepository,
           ).execute();
-          print("上传文件结果:$uploadResult");
+          logInfo("上传文件结果:$uploadResult");
           if (uploadResult is Success<bool> && uploadResult.result) {
             ticket = ticket.copyWith(
                 status: Status.JIRA_ATTACHMENTS_UPLOADED, finishedAt: DateTime

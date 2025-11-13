@@ -9,6 +9,7 @@ import 'package:bug_report_tool/page/setting_page.dart';
 import 'package:bug_report_tool/repository/jira_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
+import 'package:bug_report_tool/util/logger.dart';
 import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/video/scrcpy_video_recorder.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
@@ -33,12 +34,15 @@ void main() async {
 
   final dbFolder = await getApplicationDocumentsDirectory();
   final file = File(p.join(dbFolder.path, 'bug_report_tool.sqlite'));
-  logInfo("db file:${file.path}");
-  JIRA_REPOSITORY = JiraRepository(TicketDao(AppDatabase(file)));
+
   await GetFileDirUsecase().then((d) async {
+     BugReportLogger.init(d);
     await ScrcpyRecorder.init(d);
     await Logcat.init(d);
+   
   });
+  logInfo("db file:${file.path}");
+  JIRA_REPOSITORY = JiraRepository(TicketDao(AppDatabase(file)));
   logInfo("初始化完成");
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
     setWindowTitle('BugReportTool');

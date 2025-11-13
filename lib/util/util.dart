@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bug_report_tool/util/logger.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 
@@ -24,11 +25,10 @@ String getCurrentTimeFormatString() {
   return formatter.format(now);
 }
 
-Logger logger = Logger();
+
 
 void logInfo(String message){
-  logger.i(message);
-}
+  BugReportLogger.logInfo(  message);}
 
 
 Future<ProcessResult> runCmd(String execute, List<String> arguments) async {

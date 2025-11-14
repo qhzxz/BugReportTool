@@ -8,11 +8,11 @@ import '../model/jira_field_config.dart';
 import '../util/util.dart';
 
 
-class JiraConfigRepository {
+class ProjectConfigRepository {
 
-  const JiraConfigRepository();
+  const ProjectConfigRepository();
 
-  Future<Map<String,List<AppJiraConfig>>> loadJsonFilesFromAssets() async {
+  Future<Map<String,List<ProjectConfig>>> loadJsonFilesFromAssets() async {
     final dir = await GetFileDirUsecase();
     String jsonDirPath = '$dir${Platform.pathSeparator}json';
     Directory jsonDir = Directory(jsonDirPath);
@@ -52,7 +52,7 @@ class JiraConfigRepository {
       }
     }
     Stream<FileSystemEntity> files = jsonDir.list();
-    Map<String,List<AppJiraConfig>> result= {};
+    Map<String,List<ProjectConfig>> result= {};
     await files.forEach((f) async {
       var path = f.path;
       if (path.endsWith('.json')) {
@@ -65,7 +65,7 @@ class JiraConfigRepository {
         JiraFieldConfig jiraFieldConfig = JiraFieldConfig.fromJson(
             jsonDecode(json));
         for (var app in jiraFieldConfig.apps) {
-          result[project]?.add(AppJiraConfig(
+          result[project]?.add(ProjectConfig(
               project, app.packageName, app.dependencies, jiraFieldConfig));
         }
       }

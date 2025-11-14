@@ -6,10 +6,10 @@ import 'package:bug_report_tool/util/util.dart';
 class ReportViewModel {
   final List<String> appList = [];
   final List<String> projects = [];
-  final Map<String, List<AppJiraConfig>> configs = {};
+  final Map<String, List<ProjectConfig>> configs = {};
 
   List<String> _currentDeviceList = [];
-  List<AppJiraConfig>? _currentAppJiraConfigList;
+  List<ProjectConfig>? _currentAppJiraConfigList;
   Map<String, String> _currentVersionMap = {};
   String _currentSystemInfo = "";
   String _currentDevice = "";
@@ -93,7 +93,7 @@ class ReportViewModel {
       appJiraConfig.jiraFields.fields['reporter'] =
       {'emailAddress': reportEmail, 'name': reportEmail};
     }
-    return CreateTicketParam(currentDevice,
+    return CreateTicketParam(
         appJiraConfig, summary, description,
         [_currentZipFilePath], environment);
   }
@@ -106,7 +106,7 @@ class ReportViewModel {
     }
   }
 
-  List<AppJiraConfig>? get currentAppJiraConfigList =>
+  List<ProjectConfig>? get currentAppJiraConfigList =>
       _currentAppJiraConfigList;
 
   Map<String, String> get currentVersionMap => _currentVersionMap;

@@ -8,7 +8,6 @@ void let<T>(T? value, void Function(T) func) {
   if (value != null) func(value);
 }
 
-
 T? apply<T>(T? value, T Function(T) func) {
   if (value != null) return func(value);
 }
@@ -25,11 +24,9 @@ String getCurrentTimeFormatString() {
   return formatter.format(now);
 }
 
-
-
-void logInfo(String message){
-  BugReportLogger.logInfo(  message);}
-
+void logInfo(String message) {
+  print(message);
+}
 
 Future<ProcessResult> runCmd(String execute, List<String> arguments) async {
   try {

@@ -5,8 +5,8 @@ import 'dart:isolate';
 import 'package:bug_report_tool/main.dart';
 import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/model/ticket.dart';
-import 'package:bug_report_tool/repository/jira_config_repository.dart';
-import 'package:bug_report_tool/repository/jira_repository.dart';
+import 'package:bug_report_tool/repository/project_config_repository.dart';
+import 'package:bug_report_tool/repository/ticket_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/usecase/create_ticket_usecase.dart';
 import 'package:bug_report_tool/usecase/derive_fingerprint_usecase.dart';
@@ -14,12 +14,16 @@ import 'package:bug_report_tool/usecase/list_device_usecase.dart';
 import 'package:bug_report_tool/usecase/load_config_usecase.dart';
 import 'package:bug_report_tool/usecase/mix_voice_usecase.dart';
 import 'package:bug_report_tool/usecase/query_version_usecase.dart';
+import 'package:bug_report_tool/usecase/report_bug_usecase.dart';
+import 'package:bug_report_tool/usecase/report_ticket_usecase.dart';
 import 'package:bug_report_tool/usecase/start_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/start_screen_record_usecase.dart';
 import 'package:bug_report_tool/usecase/start_voice_recording_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_logcat_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_screen_record_usecase.dart';
 import 'package:bug_report_tool/usecase/stop_voice_recording_usecase.dart';
+import 'package:bug_report_tool/usecase/update_ticket_usecase.dart';
+import 'package:bug_report_tool/usecase/upload_file_usecase.dart';
 import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/viewmodel/report_view_model.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
@@ -30,19 +34,20 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../model/app_jira_config.dart';
+import '../model/status.dart';
 import '../usecase/zip_file_usecase.dart';
 
 class ReportPage extends StatefulWidget{
 
   final ReportViewModel reportViewModel;
   final SettingsViewModel settingViewModel;
-  final JiraConfigRepository _jiraConfigRepository;
+  final ProjectConfigRepository _jiraConfigRepository;
   final JiraRestRepository _jiraRestRepository;
-  final JiraRepository _jiraRepository;
+  final TicketRepository _jiraRepository;
 
 
   const ReportPage(
-      {super.key, required this.reportViewModel, required this.settingViewModel, required JiraConfigRepository jiraConfigRepository, required JiraRestRepository jiraRestRepository, required JiraRepository jiraRepository})
+      {super.key, required this.reportViewModel, required this.settingViewModel, required ProjectConfigRepository jiraConfigRepository, required JiraRestRepository jiraRestRepository, required TicketRepository jiraRepository})
       : _jiraConfigRepository = jiraConfigRepository,
         _jiraRestRepository = jiraRestRepository,
         _jiraRepository = jiraRepository;
@@ -57,9 +62,9 @@ class ReportPage extends StatefulWidget{
 class ReportPageState extends TabPageState<ReportPage>{
   final ReportViewModel reportViewModel;
   final SettingsViewModel settingsViewModel;
-  final JiraConfigRepository _jiraConfigRepository;
+  final ProjectConfigRepository _jiraConfigRepository;
   final JiraRestRepository _jiraRestRepository;
-  final JiraRepository _jiraRepository;
+  final TicketRepository _jiraRepository;
 
   late Function onError;
 
@@ -89,7 +94,7 @@ class ReportPageState extends TabPageState<ReportPage>{
     LoadConfigUsecase(_jiraConfigRepository).execute().then((r)
     {
       if(r is Success){
-        Map<String, List<AppJiraConfig>> map = (r as Success).result;
+        Map<String, List<ProjectConfig>> map = (r as Success).result;
         setState(() {
           logInfo("loadDefaultConfig");
           reportViewModel.configs.clear();
@@ -130,16 +135,6 @@ class ReportPageState extends TabPageState<ReportPage>{
       var audioPath = (audioResult as Success<String>).result;
       var videoPath = (videoResult as Success<String>).result;
       newVideo = await MixVoiceUsecase(videoPath, audioPath).execute();
-      File audio = File(audioPath);
-      File video = File(videoPath);
-      await Isolate.run(() async {
-        if (await audio.exists()) {
-          await audio.delete();
-        }
-        if (await video.exists()) {
-          await video.delete();
-        }
-      });
     } else {
       newVideo = videoResult;
     }
@@ -233,7 +228,10 @@ class ReportPageState extends TabPageState<ReportPage>{
         TextButton(
           child: Text('取消'),
           onPressed: (){
-            _deleteFile();
+            let(reportViewModel.getParam(
+                settingsViewModel.setting.reporterEmail), (p) async {
+              await CreateTicketUseCase(_jiraRepository, p).execute();
+            });
             Navigator.of(context).pop();
           },
         ),
@@ -248,24 +246,14 @@ class ReportPageState extends TabPageState<ReportPage>{
     );
   }
 
-  void _deleteFile() async {
-    File zip = File(reportViewModel.currentZipFilePath);
-    await Isolate.run(() async {
-      if (await zip.exists()) {
-        await zip.delete();
-      }
-    });
-  }
-
   void _reportIssue() async {
     showDialog(context: context,
         barrierDismissible: false,
         builder: (context) => LoadingDialog(text: '正在上报BUG...'));
     let(
         reportViewModel.getParam(settingsViewModel.setting.reporterEmail),
-            (p) {
-          CreateTicketUseCase(
-              _jiraRestRepository, _jiraRepository, p)
+            (p) async {
+          ReportBugUseCase(_jiraRepository,_jiraRestRepository,p)
               .execute().then((r) {
             Navigator.of(context).pop();
             if (r is Success<Ticket>) {
@@ -401,7 +389,7 @@ class ReportPageState extends TabPageState<ReportPage>{
             '请选择应用:',
             reportViewModel.currentAppJiraConfigList != null
                 ? reportViewModel.currentAppJiraConfigList!
-                .map<DropdownMenuItem<String>>((AppJiraConfig c) {
+                .map<DropdownMenuItem<String>>((ProjectConfig c) {
               return DropdownMenuItem<String>(
                 value: c.packageName,
                 child: Text(c.packageName),

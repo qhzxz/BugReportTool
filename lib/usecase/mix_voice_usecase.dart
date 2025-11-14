@@ -1,12 +1,9 @@
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:bug_report_tool/ffmpeg/ffmpeg_manager.dart';
 import 'package:bug_report_tool/model/result.dart';
-import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
-import 'package:bug_report_tool/util/util.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 
 class MixVoiceUsecase extends UseCase<String> {
@@ -15,60 +12,35 @@ class MixVoiceUsecase extends UseCase<String> {
 
   MixVoiceUsecase(this._videoFilePath, this._audioFilePath);
 
-  Future<void> _mergeMp4WithWav(Map<String, String> map) async {
-    final result = await Process.run(map['executePath']!,
-        ['-i', map['mp4Path']!, '-i', map['wavPath']!, '-map', '0:v:0',
-          '-map', '1:a:0',
-          '-c:v', 'copy',
-          '-c:a', 'aac'
-          , map['outputPath']!]);
-    logInfo("error message:${result.stderr.toString()}");
-    logInfo("return code：${result.exitCode}");
-  }
-
   @override
-  Future<Result<String>> run() async{
-    if (!await File(_videoFilePath).exists()) return Error(exception: 'video is null');
-    if (!await File(_audioFilePath).exists()) return Error(exception: 'audio is null');
-    String dirPath = await GetFileDirUsecase();
-    String time=getCurrentTimeFormatString();
-    String outputPath = '$dirPath${Platform.pathSeparator}video_$time.mp4';
-    if (Platform.isMacOS) {
-      File file = File('$dirPath${Platform.pathSeparator}ffmpeg${Platform.pathSeparator}ffmpeg');
-      if (!file.existsSync()) {
-        final bytes = await rootBundle.load('assets/ffmpeg/macos/ffmpeg');
-        await Isolate.run(() async {
-          await file.create(recursive: true);
-          await file.writeAsBytes(bytes.buffer.asUint8List());
-          await runCmd('chmod', ['+x', file.path]);
-        });
-      }
-      await compute(_mergeMp4WithWav, {
-        'executePath': file.path,
-        'mp4Path': _videoFilePath,
-        'wavPath': _audioFilePath,
-        'outputPath': outputPath
-      });
-    } else if (Platform.isWindows) {
-      File file = File('$dirPath${Platform.pathSeparator}ffmpeg${Platform.pathSeparator}ffmpeg.exe');
-      if (!file.existsSync()) {
-        final bytes = await rootBundle.load('assets/ffmpeg/windows/ffmpeg.exe');
-        await Isolate.run(() async {
-          await file.create(recursive: true);
-          await file.writeAsBytes(bytes.buffer.asUint8List());
-        });
-      }
-      await compute(_mergeMp4WithWav, {
-        'executePath': file.path,
-        'mp4Path': _videoFilePath,
-        'wavPath': _audioFilePath,
-        'outputPath': outputPath
-      });
+  Future<Result<String>> run() async {
+    if (!await File(_videoFilePath).exists()) {
+      return Error(exception: 'video is null');
     }
-    if (!await File(outputPath).exists()) {
+    if (!await File(_audioFilePath).exists()) {
+      return Error(exception: 'audio is null');
+    }
+    String? outputPath = await FFmpegManager().mixVideoAudio(
+        _videoFilePath, _audioFilePath);
+    if (outputPath == null || !await File(outputPath).exists()) {
       return Error(exception: '混音失败');
     }
-    return Success(outputPath);
-
+    String startTimeStamp= _videoFilePath.substring(_videoFilePath.indexOf('_')+1,_videoFilePath.indexOf('.mp4'));
+    var result = await FFmpegManager().addTimeStamp(outputPath, startTimeStamp);
+    await Isolate.run(() async {
+      var videoFile = File(_videoFilePath);
+      if (await videoFile.exists()) {
+        await videoFile.delete();
+      }
+      var audioFile = File(_audioFilePath);
+      if (await audioFile.exists()) {
+        await audioFile.delete();
+      }
+      var mixedFile = File(outputPath);
+      if (await mixedFile.exists()) {
+        await mixedFile.delete();
+      }
+    });
+    return Success(result);
   }
 }

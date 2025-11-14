@@ -1,6 +1,6 @@
 import 'package:bug_report_tool/main.dart';
 import 'package:bug_report_tool/model/result.dart';
-import 'package:bug_report_tool/repository/jira_repository.dart';
+import 'package:bug_report_tool/repository/ticket_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/usecase/get_ticket_usecase.dart';
 import 'package:bug_report_tool/usecase/reupload_ticket_usecase.dart';
@@ -16,10 +16,10 @@ import '../util/util.dart';
 import '../widget/loading_dialog.dart';
 
 class HistoryPage extends StatefulWidget {
-  final JiraRepository _jiraRepository;
+  final TicketRepository _jiraRepository;
   final JiraRestRepository _jiraRestRepository;
 
-  const HistoryPage({super.key, required JiraRepository jiraRepository, required JiraRestRepository jiraRestRepository}) : _jiraRepository = jiraRepository, _jiraRestRepository = jiraRestRepository;
+  const HistoryPage({super.key, required TicketRepository jiraRepository, required JiraRestRepository jiraRestRepository}) : _jiraRepository = jiraRepository, _jiraRestRepository = jiraRestRepository;
 
 
 
@@ -30,7 +30,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class HistoryPageState extends TabPageState<HistoryPage> {
-  final JiraRepository _jiraRepository;
+  final TicketRepository _jiraRepository;
   final JiraRestRepository _jiraRestRepository;
   final HistoryViewModel historyViewModel = HistoryViewModel();
 

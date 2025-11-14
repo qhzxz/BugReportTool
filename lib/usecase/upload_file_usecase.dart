@@ -1,24 +1,53 @@
+import 'dart:io';
+import 'dart:isolate';
+
 import 'package:bug_report_tool/model/result.dart';
+import 'package:bug_report_tool/model/ticket.dart';
+import 'package:bug_report_tool/repository/ticket_repository.dart';
+import 'package:bug_report_tool/usecase/update_ticket_usecase.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
 import 'package:flutter/foundation.dart';
 
+import '../model/status.dart';
 import '../repository/jira_rest_repository.dart';
 
 
-class UploadFileUsecase extends UseCase<bool> {
-  String _id;
-  List<String> _uploadFiles;
+class UploadFileUsecase extends UseCase<Ticket> {
+  Ticket _ticket;
   JiraRestRepository _jiraTicketRepository;
+  TicketRepository _ticketRepository;
 
 
-  UploadFileUsecase(this._id, this._uploadFiles, this._jiraTicketRepository);
+  UploadFileUsecase(this._ticket, this._jiraTicketRepository,
+      this._ticketRepository);
 
   @override
-  Future<Result<bool>> run() async {
-    return Success(await compute(
-      _UploadFileUsecase,
-      _Param(_id, _uploadFiles, _jiraTicketRepository),
-    ));
+  Future<Result<Ticket>> run() async {
+    var ticketId = _ticket.ticketId;
+    if (ticketId != null) {
+      var result = await compute(
+        _UploadFileUsecase,
+        _Param(ticketId, _ticket.attachments, _jiraTicketRepository),
+      );
+      if (result) {
+        var r = _ticket.copyWith(
+            status: Status.JIRA_ATTACHMENTS_UPLOADED, finishedAt: DateTime
+            .now()
+            .millisecondsSinceEpoch);
+        await UpdateTicketUseCase(_ticketRepository, r).execute();
+        var list = r.attachments;
+        if (list.isNotEmpty) {
+          await Isolate.run(() async {
+            for (var path in list) {
+              await File(path).delete();
+            }
+          });
+        }
+        return Success(r);
+      }
+    }
+
+    return Error(exception: 'ticket id 为空');
   }
 
   Future<bool> _UploadFileUsecase(_Param param) async {

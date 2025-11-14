@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:archive/archive.dart';
+import 'package:bug_report_tool/ffmpeg/ffmpeg_manager.dart';
 import 'package:flutter/services.dart';
 
 import '../util/util.dart';
@@ -110,10 +111,11 @@ class ScrcpyRecorder {
 
   String? _currentPath;
 
+  String? _recordStartTime;
+
   /// 启动录屏
   Future<String?> startRecording(String serial) async {
-    String time = getCurrentTimeFormatString();
-    String outputPath = '$_APP_DIR${Platform.pathSeparator}video_$time.mp4';
+
     // 防止重复启动
     if (_process != null) {
       logInfo('⚠️ scrcpy 正在运行，不能重复启动。');
@@ -121,6 +123,12 @@ class ScrcpyRecorder {
     }
 
     try {
+      var time_result = await runCmd('adb', ['shell', 'date', '+%s']);
+      if (time_result.exitCode == 0) {
+        String stdout = time_result.stdout.toString().trim();
+        _recordStartTime = stdout;
+      }
+      String outputPath = '$_APP_DIR${Platform.pathSeparator}video_$_recordStartTime.mp4';
       logInfo('🎬 启动 scrcpy 录屏...');
       _process = await Process.start(_executePath, [
         '-s',
@@ -168,7 +176,6 @@ class ScrcpyRecorder {
         ]);
         logInfo('kill_result:${kill_result.exitCode}}');
       }
-
       if (result != null && await File(result).exists()) {
         return result;
       }

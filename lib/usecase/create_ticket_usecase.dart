@@ -5,7 +5,7 @@ import 'dart:isolate';
 
 import 'package:bug_report_tool/model/status.dart';
 import 'package:bug_report_tool/model/ticket.dart';
-import 'package:bug_report_tool/repository/jira_repository.dart';
+import 'package:bug_report_tool/repository/ticket_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/repository/resp/create_ticket_resp.dart';
 import 'package:bug_report_tool/usecase/upload_file_usecase.dart';
@@ -18,12 +18,11 @@ import '../model/jira_field_config.dart';
 import '../model/result.dart';
 import '../util/util.dart';
 
-class CreateTicketUseCase extends UseCase<Ticket>{
-  final JiraRestRepository _jiraRestRepository;
-  final JiraRepository _jiraRepository;
+class CreateTicketUseCase extends UseCase<Ticket> {
+  final TicketRepository _jiraRepository;
   final CreateTicketParam _param;
 
-  CreateTicketUseCase(this._jiraRestRepository, this._jiraRepository,
+  CreateTicketUseCase(this._jiraRepository,
       this._param);
 
 
@@ -64,70 +63,27 @@ class CreateTicketUseCase extends UseCase<Ticket>{
   }
 
   @override
-  Future<Result<Ticket>> run() async{
+  Future<Result<Ticket>> run() async {
     String id = Uuid().v4();
     String jiraField = _generateJiraFields(_param);
     Ticket ticket = _generateTicket(id, jiraField, _param);
-    await compute(_jiraRepository.saveTicket, ticket);
-    CreateTicketResp? ticketResp;
-    try {
-      ticketResp = await compute(_jiraRestRepository.createTicket, jiraField);
-    } catch (e) {
-      return Error(exception: e);
+    bool result = await compute(_jiraRepository.saveTicket, ticket);
+    if (result) {
+      return Success(ticket);
+    } else {
+      return Error(exception: '保存失败');
     }
-    if (ticketResp != null) {
-      var key = ticketResp.key;
-      if (key != null) {
-        ticket = ticket.copyWith(ticketId: key,status: Status.JIRA_CREATED,url: ticketResp.self);
-        logInfo("ticket:$ticket");
-        await compute(_jiraRepository.updateTicket, ticket);
-        try {
-          var uploadResult = await UploadFileUsecase(
-            key,
-            ticket.attachments,
-            _jiraRestRepository,
-          ).execute();
-          logInfo("上传文件结果:$uploadResult");
-          if (uploadResult is Success<bool> && uploadResult.result) {
-            ticket = ticket.copyWith(
-                status: Status.JIRA_ATTACHMENTS_UPLOADED, finishedAt: DateTime
-                .now()
-                .millisecondsSinceEpoch);
-            await compute(_jiraRepository.updateTicket, ticket);
-            final List<String> files = ticket.attachments;
-            if (files.isNotEmpty) {
-              await Isolate.run(() async {
-                for (var path in files) {
-                  await File(path).delete();
-                }
-              });
-            }
-          }else {
-            return Error(exception: (uploadResult as Error).exception);
-          }
-        } catch (e) {
-          return Error(exception: e);
-        }
-      } else {
-        return Error(exception: ticketResp.errors);
-      }
-    }else{
-      return Error(exception: '响应异常');
-    }
-    return Success(ticket);
-
-  }}
+  }
+}
 
 class CreateTicketParam {
-  final String serial;
-  final AppJiraConfig appJiraConf;
+  final ProjectConfig appJiraConf;
   final String ticketTitle;
   final String ticketDescription;
   final List<String> filePathList;
   final Map<String, String>? environment;
 
   CreateTicketParam(
-    this.serial,
     this.appJiraConf,
     this.ticketTitle,
     this.ticketDescription,

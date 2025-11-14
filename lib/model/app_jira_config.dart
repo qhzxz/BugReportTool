@@ -2,13 +2,13 @@ import 'dart:core';
 import 'jira_field_config.dart';
 
 
-class AppJiraConfig {
+class ProjectConfig {
   String project;
   String packageName;
   List<String>? dependPackages;
   JiraFieldConfig jiraFields;
 
-  AppJiraConfig(
+  ProjectConfig(
     this.project,
     this.packageName,
     this.dependPackages,

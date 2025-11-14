@@ -2,31 +2,30 @@ import 'dart:io';
 
 import 'package:bug_report_tool/database/app_database.dart';
 import 'package:bug_report_tool/database/dao/ticket_dao.dart';
+import 'package:bug_report_tool/ffmpeg/ffmpeg_manager.dart';
 import 'package:bug_report_tool/logcat/logcat.dart';
 import 'package:bug_report_tool/page/history_page.dart';
 import 'package:bug_report_tool/page/report_page.dart';
 import 'package:bug_report_tool/page/setting_page.dart';
-import 'package:bug_report_tool/repository/jira_repository.dart';
+import 'package:bug_report_tool/repository/ticket_repository.dart';
 import 'package:bug_report_tool/repository/jira_rest_repository.dart';
 import 'package:bug_report_tool/usecase/get_file_dir_usecase.dart';
-import 'package:bug_report_tool/util/logger.dart';
 import 'package:bug_report_tool/util/util.dart';
 import 'package:bug_report_tool/video/scrcpy_video_recorder.dart';
 import 'package:bug_report_tool/viewmodel/settings_view_model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:window_size/window_size.dart';
 
-import 'repository/jira_config_repository.dart';
+import 'repository/project_config_repository.dart';
 import 'viewmodel/report_view_model.dart';
 
 
 
-final JiraConfigRepository JIRA_CONFIG_REPOSITORY = JiraConfigRepository();
+final ProjectConfigRepository PROJECT_CONFIG_REPOSITORY = ProjectConfigRepository();
 final JiraRestRepository JIRA_REST_REPOSITORY = JiraRestRepository();
-late final JiraRepository JIRA_REPOSITORY;
+late final TicketRepository TICKET_REPOSITORY;
 
 
 void main() async {
@@ -36,13 +35,12 @@ void main() async {
   final file = File(p.join(dbFolder.path, 'bug_report_tool.sqlite'));
 
   await GetFileDirUsecase().then((d) async {
-     BugReportLogger.init(d);
     await ScrcpyRecorder.init(d);
     await Logcat.init(d);
-   
+    await FFmpegManager().initialize(d);
   });
   logInfo("db file:${file.path}");
-  JIRA_REPOSITORY = JiraRepository(TicketDao(AppDatabase(file)));
+  TICKET_REPOSITORY = TicketRepository(TicketDao(AppDatabase(file)));
   logInfo("初始化完成");
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
     setWindowTitle('BugReportTool');
@@ -101,10 +99,10 @@ class _MyHomePageState extends State<MyHomePage> {
     pages = [
       ReportPage(key: reportKey,reportViewModel: reportViewModel,
           settingViewModel: settingsViewModel,
-          jiraConfigRepository: JIRA_CONFIG_REPOSITORY,
+          jiraConfigRepository: PROJECT_CONFIG_REPOSITORY,
           jiraRestRepository: JIRA_REST_REPOSITORY,
-          jiraRepository: JIRA_REPOSITORY),
-      HistoryPage(key: historyKey,jiraRepository: JIRA_REPOSITORY,jiraRestRepository: JIRA_REST_REPOSITORY),
+          jiraRepository: TICKET_REPOSITORY),
+      HistoryPage(key: historyKey,jiraRepository: TICKET_REPOSITORY,jiraRestRepository: JIRA_REST_REPOSITORY),
       SettingsPage(key: settingKey,viewModel: settingsViewModel)
     ];
   }

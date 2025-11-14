@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -56,9 +57,21 @@ class FFmpegManager {
     }
   }
 
+
+  Future<String> unifyFrame(String videoPath) async {
+    String time = getCurrentTimeFormatString();
+    String outputPath = '$_dirPath${Platform.pathSeparator}unifyFramevideo_$time.mp4';
+    await compute(_unifyFrameRate, {
+      'executePath': _executePath,
+      'mp4Path': videoPath,
+      'outputPath': outputPath
+    });
+    return outputPath;
+  }
+
   Future<String> addTimeStamp(String videoPath,String startTimeStamp) async {
     String time=getCurrentTimeFormatString();
-    String outputPath = '$_dirPath${Platform.pathSeparator}video_with_timestamp_$time.mp4';
+    String outputPath = '$_dirPath${Platform.pathSeparator}videoWithTimestamp_$time.mp4';
     await compute(_addTimestampToVideo, {
       'executePath': _executePath,
       'mp4Path': videoPath,
@@ -70,7 +83,7 @@ class FFmpegManager {
 
   Future<String?> mixVideoAudio(String videoPath,String audioPath) async {
     String time=getCurrentTimeFormatString();
-    String outputPath = '$_dirPath${Platform.pathSeparator}video_final_$time.mp4';
+    String outputPath = '$_dirPath${Platform.pathSeparator}videoFinal_$time.mp4';
     await compute(_mergeMp4WithWav, {
       'executePath': _executePath,
       'mp4Path': videoPath,
@@ -123,4 +136,26 @@ class FFmpegManager {
   }
 
 
+  Future<String> _unifyFrameRate(Map<String, String> map) async {
+    return await runCmd(map['executePath']!,
+        [
+          '-i',
+          map['mp4Path']!,
+          '-c:v',
+          'libx264',
+          '-r',
+          '30',
+          '-c:a',
+          'copy',
+          map['outputPath']!
+        ]).then((result) {
+      if (result.exitCode != 0) {
+        logInfo("_unifyFrameRate error message:${result.stderr.toString()}");
+        logInfo("_unifyFrameRate return code：${result.exitCode}");
+      } else {
+        logInfo("_unifyFrameRate return code：0");
+      }
+      return map['outputPath']!;
+    });
+  }
 }

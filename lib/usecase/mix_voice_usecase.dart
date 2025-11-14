@@ -26,7 +26,8 @@ class MixVoiceUsecase extends UseCase<String> {
       return Error(exception: '混音失败');
     }
     String startTimeStamp= _videoFilePath.substring(_videoFilePath.indexOf('_')+1,_videoFilePath.indexOf('.mp4'));
-    var result = await FFmpegManager().addTimeStamp(outputPath, startTimeStamp);
+    var fixed = await FFmpegManager().unifyFrame(outputPath);
+    var result = await FFmpegManager().addTimeStamp(fixed, startTimeStamp);
     await Isolate.run(() async {
       var videoFile = File(_videoFilePath);
       if (await videoFile.exists()) {
@@ -39,6 +40,10 @@ class MixVoiceUsecase extends UseCase<String> {
       var mixedFile = File(outputPath);
       if (await mixedFile.exists()) {
         await mixedFile.delete();
+      }
+      var fixedFile = File(fixed);
+      if (await fixedFile.exists()) {
+        await fixedFile.delete();
       }
     });
     return Success(result);

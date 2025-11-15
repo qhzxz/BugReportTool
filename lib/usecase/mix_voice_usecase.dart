@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:bug_report_tool/ffmpeg/ffmpeg_manager.dart';
 import 'package:bug_report_tool/model/result.dart';
 import 'package:bug_report_tool/usecase/usecase.dart';
+import 'package:path/path.dart' as p;
 
 
 class MixVoiceUsecase extends UseCase<String> {
@@ -25,7 +27,8 @@ class MixVoiceUsecase extends UseCase<String> {
     if (outputPath == null || !await File(outputPath).exists()) {
       return Error(exception: '混音失败');
     }
-    String startTimeStamp= _videoFilePath.substring(_videoFilePath.indexOf('_')+1,_videoFilePath.indexOf('.mp4'));
+    String fileName = p.basename(_videoFilePath);
+    String startTimeStamp= fileName.substring(fileName.indexOf('_')+1,fileName.indexOf('.mp4'));
     var fixed = await FFmpegManager().unifyFrame(outputPath);
     var result = await FFmpegManager().addTimeStamp(fixed, startTimeStamp);
     await Isolate.run(() async {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -23,13 +24,16 @@ class FFmpegManager {
 
   late String _dirPath;
 
+  late String _fontFilePath;
+
   // Method to initialize FFmpeg
   Future<void> initialize(String dirPath) async {
     if (!_isInitialized) {
       _dirPath = dirPath;
       if (Platform.isMacOS) {
-        File file = File('$dirPath${Platform.pathSeparator}ffmpeg_1.0${Platform
-            .pathSeparator}ffmpeg');
+        File file = File(
+          '$dirPath${Platform.pathSeparator}ffmpeg_1.0${Platform.pathSeparator}ffmpeg',
+        );
         if (!file.existsSync()) {
           final bytes = await rootBundle.load('assets/ffmpeg/macos/ffmpeg');
           await Isolate.run(() async {
@@ -40,17 +44,30 @@ class FFmpegManager {
         }
         _executePath = file.path;
       } else if (Platform.isWindows) {
-        File file = File('$dirPath${Platform.pathSeparator}ffmpeg_1.0${Platform
-            .pathSeparator}ffmpeg.exe');
+        File file = File(
+          '$dirPath${Platform.pathSeparator}ffmpeg_1.0${Platform.pathSeparator}ffmpeg.exe',
+        );
         if (!file.existsSync()) {
           final bytes = await rootBundle.load(
-              'assets/ffmpeg/windows/ffmpeg.exe');
+            'assets/ffmpeg/windows/ffmpeg.exe',
+          );
           await Isolate.run(() async {
             await file.create(recursive: true);
             await file.writeAsBytes(bytes.buffer.asUint8List());
           });
         }
         _executePath = file.path;
+        File fontFile = File(
+          '$dirPath${Platform.pathSeparator}font${Platform.pathSeparator}arial.ttf',
+        );
+        if (!fontFile.existsSync()) {
+          final bytes = await rootBundle.load('assets/font/arial.ttf');
+          await Isolate.run(() async {
+            await fontFile.create(recursive: true);
+            await fontFile.writeAsBytes(bytes.buffer.asUint8List());
+          });
+        }
+        _fontFilePath =fontFile.path;
       }
 
       _isInitialized = true;
@@ -110,29 +127,46 @@ class FFmpegManager {
 
   Future<void> _addTimestampToVideo(Map<String, String> map) async {
     final isWindows = Platform.isWindows;
-    final drawtext = isWindows
-        ? r'drawtext=text=%{pts\:localtime\:'+map['startTimeStamp']!+r'\:%Y-%m-%d %H\\:%M\\:%S}:x=20:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=0x00000099'
-        : r'drawtext=text=%{pts\\:localtime\\:'+map['startTimeStamp']!+r'\\:%Y-%m-%d %H\\\\\\:%M\\\\\\:%S}:x=20:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=0x00000099';
+    String timeStamp = map['startTimeStamp']!;
+    if (isWindows) {
 
-    print('_addTimestampToVideo drawtext:$drawtext');
-    final result = await Process.run(map['executePath']!,
-        [
-          '-i',
-          map['mp4Path']!,
-          '-vf',
-          drawtext,
-          '-c:a',
-          'copy',
-          map['outputPath']!
-        ]);
-    logInfo("_addTimestampToVideo error message:${result.stderr.toString()}");
-    logInfo("_addTimestampToVideo return code：${result.exitCode}");
-    // if (result.exitCode !=0) {
-    //
-    // }else {
-    //   logInfo("_addTimestampToVideo return code：0");
-    // }
+      final drawtext =
+          "drawtext=fontfile='${_fontFilePath.replaceAll("\\", "/").replaceFirst(":", "\\\:")}':"
+          "text='%{pts\\:localtime\\:$timeStamp\\:%Y-%m-%d %H\\\\\\:%M\\\\\\:%S}':"
+          "x=20:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=0x00000099";
+      final result = await Process.run(map['executePath']!, [
+        '-i',
+        map['mp4Path']!,
+        '-vf',
+        drawtext,
+        '-c:a',
+        'copy',
+        map['outputPath']!,
+      ]);
+      if(result.exitCode!=0){
+          logInfo("_addTimestampToVideo error message:${result.stderr.toString()}");
+      }
 
+      logInfo("_addTimestampToVideo return code：${result.exitCode}");
+    } else {
+      final drawtext =
+          r'drawtext=text=%{pts\\:localtime\\:' +
+          timeStamp +
+          r'\\:%Y-%m-%d %H\\\\\\:%M\\\\\\:%S}:x=20:y=20:fontsize=36:fontcolor=white:box=1:boxcolor=0x00000099';
+      final result = await Process.run(map['executePath']!, [
+        '-i',
+        map['mp4Path']!,
+        '-vf',
+        drawtext,
+        '-c:a',
+        'copy',
+        map['outputPath']!,
+      ]);
+      if(result.exitCode!=0){
+          logInfo("_addTimestampToVideo error message:${result.stderr.toString()}");
+      }
+      logInfo("_addTimestampToVideo return code：${result.exitCode}");
+    }
   }
 
 

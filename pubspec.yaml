@@ -73,7 +73,7 @@ flutter:
   assets:
     - assets/json/
     - assets/font/
-    - assets/ffmpeg/windows/ffmpeg.exe
+    - assets/ffmpeg/windows/ffmpeg.zip
     - assets/ffmpeg/macos/ffmpeg
     - assets/scrcpy/macos/scrcpy.zip
     - assets/scrcpy/windows/scrcpy.zip

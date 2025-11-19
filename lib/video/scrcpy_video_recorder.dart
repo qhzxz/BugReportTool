@@ -48,7 +48,7 @@ class ScrcpyRecorder {
     if (Platform.isMacOS) {
       final zipPath = 'assets/scrcpy/macos/scrcpy.zip';
       _executePath = '$scrcpyDirPath${Platform.pathSeparator}scrcpy';
-      await _unzip(scrcpyDirPath, _executePath, zipPath);
+      await unzip(scrcpyDirPath, _executePath, zipPath);
       await runCmd('chmod', [
         '+x',
         '$scrcpyDirPath${Platform.pathSeparator}scrcpy',
@@ -60,48 +60,11 @@ class ScrcpyRecorder {
     } else if (Platform.isWindows) {
       _executePath = '$scrcpyDirPath${Platform.pathSeparator}scrcpy.exe';
       final zipPath = 'assets/scrcpy/windows/scrcpy.zip';
-      await _unzip(scrcpyDirPath, _executePath, zipPath);
+      await unzip(scrcpyDirPath, _executePath, zipPath);
     }
     logInfo("ScrcpyRecorder init finished");
   }
 
-  static Future<void> _unzip(
-    String scrcpyDirPath,
-    String executePath,
-    String zipPath,
-  ) async {
-    File scrcpyFile = File(executePath);
-    if (!await scrcpyFile.exists()) {
-      Directory scrcpyDir = Directory(scrcpyDirPath);
-      if (await scrcpyDir.exists()) {
-        await Isolate.run(() async {
-          await scrcpyDir.delete(recursive: true);
-        });
-      }
-      final bytes = await rootBundle.load(zipPath);
-      final archive = ZipDecoder().decodeBytes(Uint8List.sublistView(bytes));
-      await Isolate.run(() async {
-        await scrcpyDir.create(recursive: true);
-      });
-      for (var file in archive.files) {
-        final filename = file.name;
-        final filePath = '$scrcpyDirPath${Platform.pathSeparator}$filename';
-        if (file.isFile) {
-          final outFile = File(filePath);
-          await Isolate.run(() async {
-            await outFile.create(recursive: true);
-            await outFile.writeAsBytes(file.content as List<int>, flush: true);
-          });
-          logInfo('✅ Extracted file: $filePath');
-        } else {
-          await Isolate.run(() async {
-            await Directory(filePath).create(recursive: true);
-          });
-          logInfo('📁 Created directory: $filePath');
-        }
-      }
-    }
-  }
 
   /// 当前 scrcpy 进程
   Process? _process;

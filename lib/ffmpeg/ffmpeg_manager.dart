@@ -47,16 +47,17 @@ class FFmpegManager {
         File file = File(
           '$dirPath${Platform.pathSeparator}ffmpeg_1.0${Platform.pathSeparator}ffmpeg.exe',
         );
-        if (!file.existsSync()) {
-          final bytes = await rootBundle.load(
-            'assets/ffmpeg/windows/ffmpeg.exe',
-          );
-          await Isolate.run(() async {
-            await file.create(recursive: true);
-            await file.writeAsBytes(bytes.buffer.asUint8List());
-          });
-        }
         _executePath = file.path;
+        if (!file.existsSync()) {
+          
+          final zipPath = 'assets/ffmpeg/windows/ffmpeg.zip';
+          await unzip(
+            '$dirPath${Platform.pathSeparator}ffmpeg_1.0',
+            _executePath,
+            zipPath,
+          );
+        }
+       
         File fontFile = File(
           '$dirPath${Platform.pathSeparator}font${Platform.pathSeparator}arial.ttf',
         );

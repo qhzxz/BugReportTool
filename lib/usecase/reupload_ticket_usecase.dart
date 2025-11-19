@@ -31,6 +31,8 @@ class ReuploadTicketUsecase extends UseCase<Ticket>{
             _jiraRestRepository, _repository, temp).execute();
         if (result is Success<Ticket>) {
           temp = result.result;
+        }else{
+          return Error(exception: (result as Error).exception);
         }
       }
       catch (e) {
@@ -43,6 +45,8 @@ class ReuploadTicketUsecase extends UseCase<Ticket>{
             temp, _jiraRestRepository, _repository).execute();
         if (result is Success<Ticket>) {
           temp = result.result;
+        }else{
+          return Error(exception: (result as Error).exception);
         }
       } catch (e) {
         return Error(exception: e);

@@ -30,6 +30,7 @@ class ReportTicketUseCase extends UseCase<Ticket> {
 
   @override
   Future<Result<Ticket>> run() async {
+    logInfo("开始创建工单:${_param.title}");
     CreateTicketResp? ticketResp;
     try {
       ticketResp =
@@ -37,6 +38,7 @@ class ReportTicketUseCase extends UseCase<Ticket> {
     } catch (e) {
       return Error(exception: e);
     }
+    logInfo( "工单创建结果:$ticketResp");
     if (ticketResp != null) {
       var key = ticketResp.key;
       if (key != null) {
